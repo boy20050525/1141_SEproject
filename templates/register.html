@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>🧾 建立新帳號</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background-color: #f7f3ef;
+      color: #3b2f2f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .register-container {
+      background-color: #fffdfa;
+      width: 400px;
+      padding: 40px 50px;
+      border-radius: 15px;
+      box-shadow: 0 6px 20px rgba(80, 70, 60, 0.15);
+      text-align: center;
+    }
+
+    h2 {
+      color: #3e2e1e;
+      margin-bottom: 25px;
+      font-size: 26px;
+      letter-spacing: 1px;
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      font-weight: 600;
+      color: #4a3b2a;
+      margin-top: 12px;
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #cdbda3;
+      background-color: #fffdf9;
+      font-size: 15px;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus {
+      border-color: #c2a676;
+      box-shadow: 0 0 5px rgba(194,166,118,0.4);
+    }
+
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 12px;
+      background-color: #c2a676;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #a88752;
+    }
+
+    p {
+      margin-top: 25px;
+      font-size: 14px;
+      color: #5a4632;
+    }
+
+    a {
+      color: #7a5e3e;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      color: #a88752;
+      text-decoration: underline;
+    }
+
+    .footer-note {
+      margin-top: 30px;
+      font-size: 13px;
+      color: #7a6b5b;
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <h2>🧾 建立新帳號</h2>
+
+    <form action="/register" method="post">
+      <label>使用者名稱：</label>
+      <input type="text" name="username" required>
+
+      <label>密碼：</label>
+      <input type="password" name="password" required>
+
+      <label>電子郵件：</label>
+      <input type="text" name="email" required>
+
+      <label>角色：</label>
+      <select name="role" required>
+        <option value="甲方">甲方（委託人）</option>
+        <option value="乙方">乙方（接案人）</option>
+      </select>
+
+      <button type="submit">✨ 建立帳號</button>
+    </form>
+
+    <p>已經有帳號了嗎？ <a href="/loginForm">前往登入</a></p>
+    <div class="footer-note">© 2025 工作委託平台</div>
+  </div>
+</body>
+</html>
