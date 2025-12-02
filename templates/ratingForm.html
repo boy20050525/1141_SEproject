@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>提交評價</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    body {
+      margin: 0;
+      background-color: #f7f3ef;
+      color: #3b2f2f;
+    }
+    header {
+      background-color: #e9dfd0;
+      padding: 20px 40px;
+      text-align: center;
+      border-bottom: 2px solid #d4c7b5;
+    }
+    header h2 {
+      margin: 0;
+      font-size: 26px;
+      color: #3e2e1e;
+    }
+    main {
+      max-width: 800px;
+      background-color: #fffdfa;
+      margin: 40px auto;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 6px 20px rgba(80, 70, 60, 0.15);
+    }
+    h3 {
+      border-left: 6px solid #c2a676;
+      padding-left: 14px;
+      color: #4b3c2b;
+      margin-bottom: 20px;
+    }
+    .rating-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background-color: #fffaf3;
+      border-radius: 10px;
+      border-left: 4px solid #c2a676;
+    }
+    .rating-dimension {
+      margin-bottom: 20px;
+    }
+    .rating-dimension label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #4a3825;
+    }
+    .star-rating {
+      display: flex;
+      gap: 8px;
+    }
+    .star {
+      font-size: 28px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      color: #ccc;
+    }
+    .star:hover, .star.active {
+      transform: scale(1.2);
+      color: #c2a676;
+    }
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #cdbda3;
+      background-color: #fffdf9;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 100px;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    button {
+      background-color: #c2a676;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      font-size: 15px;
+    }
+    button:hover {
+      background-color: #a88752;
+    }
+    .user-profile {
+      background-color: #f9f5f0;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+    }
+    .rating-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .stat-card {
+      background-color: white;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid #e2d5c4;
+    }
+    .stat-card .score {
+      font-size: 24px;
+      font-weight: 700;
+      color: #c2a676;
+    }
+    .stat-card .label {
+      font-size: 12px;
+      color: #7a6b5b;
+      margin-top: 5px;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #7a6b5b;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #7a5e3e;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h2>✨ 提交評價</h2>
+  </header>
+
+  <main>
+    <a href="/" class="back-link">← 返回首頁</a>
+
+    <!-- 被評價者資訊 -->
+    <div class="user-profile">
+      <h3>被評價用戶資料</h3>
+      <p><strong>用戶名：</strong> {{ ratee.username }}</p>
+      <p><strong>角色：</strong> {{ ratee.role }}</p>
+      
+      <!-- 顯示該用戶過去的平均評價 -->
+      <div class="rating-stats">
+        <div class="stat-card">
+          <div class="score">{{ avg_score if avg_score else '--' }}</div>
+          <div class="label">整體評分</div>
+        </div>
+        <div class="stat-card">
+          <div class="score">{{ total_ratings }}</div>
+          <div class="label">評價次數</div>
+        </div>
+      </div>
+    </div>
+	
+	<!-- 倒數計時區塊 -->
+	<div id="countdown-box" style="padding:14px; background:#fff7e6; border:1px solid #e0d9b0; border-radius:10px; margin-bottom:18px;">
+		⏳ 評價剩餘時間：<span id="countdown-text">計算中...</span>
+	</div>
+
+	<script>
+		// 後端獲取deadline
+		const deadlineStr = "{{ deadline }}";  
+		const deadline = new Date(deadlineStr.replace(/-/g, "/")).getTime();
+		
+		function updateCountdown() {
+			const now = new Date().getTime();
+			let diff = deadline - now;
+
+			if (diff <= 0) {
+				document.getElementById("countdown-text").innerHTML = "已超過期限";
+				return;
+			}
+
+			// 計算天數、時數、分鐘、秒
+			const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+			diff %= (1000 * 60 * 60 * 24);
+			const hours = Math.floor(diff / (1000 * 60 * 60));
+			diff %= (1000 * 60 * 60);
+			const minutes = Math.floor(diff / (1000 * 60));
+			const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+			let text = "";
+
+			if (days > 0) text += `${days}天 `;
+			if (hours >= 0) text += `${hours}小時 `;
+			if (minutes >= 0) text += `${minutes}分 `;
+			text += `${seconds}秒`;
+
+			document.getElementById("countdown-text").innerHTML = text;
+		}
+
+		// 每秒更新一次
+		setInterval(updateCountdown, 1000);
+		updateCountdown();
+	</script>
+	
+    <!-- 評價表單 -->
+    <form id="ratingForm" method="post" action="/api/submitRating">
+      <input type="hidden" name="job_id" value="{{ job_id }}">
+      <input type="hidden" name="ratee_id" value="{{ ratee.id }}" id="ratee_id_input">
+      
+      <!-- 調試：檢查 ratee_id 是否正確 -->
+      <script>
+        console.log('Template 中的 ratee_id:', "{{ ratee.id }}");
+        console.log('Template 中的 job_id:', "{{ job_id }}");
+      </script>
+
+      <!-- 評價維度 1 -->
+      <div class="rating-section">
+        <label>
+		  {% if ratee_role == "甲方" %}
+		    需求合理性
+		  {% else %}
+		    產出品質
+		  {% endif %}
+		</label>
+        <p style="font-size: 13px; color: #7a6b5b;">
+		  {% if ratee_role == "甲方" %}
+		    委託人是否清楚表達需求？
+		  {% else %}
+		    成果品質是否符合預期？
+		  {% endif %}
+		</p>
+        <div class="star-rating" data-dimension="1">
+          <span class="star" data-score="1">☆</span>
+          <span class="star" data-score="2">☆</span>
+          <span class="star" data-score="3">☆</span>
+          <span class="star" data-score="4">☆</span>
+          <span class="star" data-score="5">☆</span>
+        </div>
+        <input type="hidden" name="dimension1_score" value="0">
+      </div>
+
+      <!-- 評價維度 2 -->
+      <div class="rating-section">
+        <label>
+		  {% if ratee_role == "甲方" %}
+		    驗收難度
+		  {% else %}
+		    執行效率
+		  {% endif %}
+		</label>
+        <p style="font-size: 13px; color: #7a6b5b;">
+		  {% if ratee_role == "甲方" %}
+		    驗收標準是否合理？
+		  {% else %}
+		    工作進度是否符合預期？
+		  {% endif %}
+		</p>
+        <div class="star-rating" data-dimension="2">
+          <span class="star" data-score="1">☆</span>
+          <span class="star" data-score="2">☆</span>
+          <span class="star" data-score="3">☆</span>
+          <span class="star" data-score="4">☆</span>
+          <span class="star" data-score="5">☆</span>
+        </div>
+        <input type="hidden" name="dimension2_score" value="0">
+      </div>
+
+      <!-- 評價維度 3 -->
+      <div class="rating-section">
+        <label>合作態度</label>
+        <p style="font-size: 13px; color: #7a6b5b;">
+		  {% if ratee_role == "甲方" %}
+		    委託人的溝通態度如何？
+		  {% else %}
+		    承包人的溝通態度如何？
+		  {% endif %}
+		</p>
+        <div class="star-rating" data-dimension="3">
+          <span class="star" data-score="1">☆</span>
+          <span class="star" data-score="2">☆</span>
+          <span class="star" data-score="3">☆</span>
+          <span class="star" data-score="4">☆</span>
+          <span class="star" data-score="5">☆</span>
+        </div>
+        <input type="hidden" name="dimension3_score" value="0">
+      </div>
+
+      <!-- 質性評論 -->
+      <div class="rating-section">
+        <label for="comment">📝 整體評論（選填）</label>
+        <textarea name="comment" id="comment" placeholder="分享合作心得..."></textarea>
+      </div>
+
+      <button type="submit">✅ 提交評價</button>
+    </form>
+  </main>
+
+  <footer>© 2025 工作委託平台 | 評價系統</footer>
+
+  <script>
+    // 星星評分互動
+    document.querySelectorAll('.star-rating').forEach(ratingDiv => {
+      const stars = ratingDiv.querySelectorAll('.star');
+      const dimension = ratingDiv.dataset.dimension;
+      const hiddenInput = ratingDiv.parentElement.querySelector(`input[name="dimension${dimension}_score"]`);
+
+      stars.forEach(star => {
+        star.addEventListener('click', () => {
+          const score = star.dataset.score;
+          hiddenInput.value = score;
+
+          stars.forEach(s => {
+            if (s.dataset.score <= score) {
+              s.textContent = '★';
+              s.classList.add('active');
+              s.style.color = '#c2a676';
+            } else {
+              s.textContent = '☆';
+              s.classList.remove('active');
+              s.style.color = '#ccc';
+            }
+          });
+        });
+
+        // 滑鼠懸停效果
+        star.addEventListener('mouseover', () => {
+          const hoverScore = star.dataset.score;
+          stars.forEach(s => {
+            if (s.dataset.score <= hoverScore) {
+              s.style.color = '#c2a676';
+            } else {
+              s.style.color = '#ccc';
+            }
+          });
+        });
+      });
+
+      ratingDiv.addEventListener('mouseout', () => {
+        const currentScore = hiddenInput.value;
+        stars.forEach(s => {
+          if (s.dataset.score <= currentScore) {
+            s.style.color = '#c2a676';
+          } else {
+            s.style.color = '#ccc';
+          }
+        });
+      });
+    });
+
+    // 表單提交
+    document.getElementById('ratingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const dim1 = document.querySelector('input[name="dimension1_score"]').value;
+      const dim2 = document.querySelector('input[name="dimension2_score"]').value;
+      const dim3 = document.querySelector('input[name="dimension3_score"]').value;
+
+      if (dim1 == 0 || dim2 == 0 || dim3 == 0) {
+        alert('❌ 請為所有三個維度都評分');
+        return;
+      }
+
+      const formData = new FormData(e.target);
+      
+      console.log('=== 提交評價數據 ===');
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+      }
+      
+      try {
+        const response = await fetch('/api/submitRating', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const responseData = await response.json();
+        console.log('服務器回應:', responseData);
+        
+        if (response.ok) {
+          alert('✅ 評價已成功提交！');
+          window.location.href = '/';
+        } else if (response.status === 410) {
+          alert('❌ 評價期限已過');
+        } else if (response.status === 422) {
+          alert('❌ 數據格式錯誤：' + (responseData.detail || '請檢查所有欄位'));
+        } else {
+          alert('❌ 提交失敗：' + (responseData.detail || '請稍後重試'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ 提交失敗：' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>

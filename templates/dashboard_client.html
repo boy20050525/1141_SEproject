@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>甲方控制台 | 工作委託平台</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background-color: #f7f3ef;
+      color: #3b2f2f;
+    }
+
+    /* ===== 導覽列 ===== */
+    header {
+      background-color: #e9dfd0;
+      padding: 15px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #d4c7b5;
+      box-shadow: 0 3px 10px rgba(60, 50, 40, 0.1);
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 26px;
+      color: #3e2e1e;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: #4a3825;
+      font-weight: 600;
+      margin: 0 10px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      transition: all 0.25s ease;
+    }
+
+    nav a:hover {
+      background-color: #d4c7b5;
+      color: #2c1f11;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ===== 主內容 ===== */
+    main {
+      max-width: 1000px;
+      background-color: #fffdfa;
+      margin: 40px auto;
+      padding: 40px 50px;
+      border-radius: 15px;
+      box-shadow: 0 6px 20px rgba(80, 70, 60, 0.15);
+      animation: fadeIn 0.6s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h3 {
+      border-left: 6px solid #c2a676;
+      padding-left: 14px;
+      font-size: 22px;
+      margin-bottom: 25px;
+      color: #4b3c2b;
+    }
+
+    /* ===== 案件表格 ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden;
+      background-color: #fffaf3;
+      box-shadow: 0 3px 10px rgba(120, 100, 80, 0.1);
+    }
+
+    th, td {
+      padding: 14px 16px;
+      text-align: center;
+      border-bottom: 1px solid #e2d5c4;
+    }
+
+    th {
+      background-color: #e9dfd0;
+      color: #3a2a1a;
+      font-weight: 700;
+      font-size: 15px;
+      text-transform: uppercase;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f5f0;
+    }
+
+    tr:hover {
+      background-color: #f3e7d8;
+      transition: background-color 0.25s ease;
+    }
+
+    td a {
+      color: #7a5e3e;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    td a:hover {
+      text-decoration: underline;
+      color: #a88752;
+    }
+
+    /* ===== 按鈕樣式 ===== */
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      color: white;
+      transition: all 0.3s ease;
+    }
+
+    .btn-add {
+      background-color: #c2a676;
+    }
+
+    .btn-add:hover {
+      background-color: #a88752;
+      box-shadow: 0 3px 8px rgba(160, 120, 70, 0.3);
+    }
+
+    .btn-logout {
+      background-color: #d9916a;
+    }
+
+    .btn-logout:hover {
+      background-color: #c26f47;
+      box-shadow: 0 3px 8px rgba(160, 90, 50, 0.3);
+    }
+
+    /* ===== 頁尾 ===== */
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #7a6b5b;
+      background-color: #f1e9de;
+      border-top: 1px solid #d8ccba;
+    }
+
+    footer span {
+      color: #a88752;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h2>甲方控制台</h2>
+    <nav>
+      <a href="/">🏠 首頁</a>
+      <a href="/addJobForm" class="btn btn-add">➕ 新增工作</a>
+      <a href="/logout" class="btn btn-logout">🚪 登出</a>
+    </nav>
+  </header>
+
+  <main>
+    <h3>📋 我發出的案件</h3>
+    <form action="/" method="get" style="margin-bottom: 20px; text-align: right;">
+    <label for="status" style="font-weight:600; color:#5a4632;">狀態分類：</label>
+    <select name="status" id="status" onchange="this.form.submit()" 
+    style="padding: 6px 10px; border-radius: 6px; border: 1px solid #d4c7b5; background-color:#fffaf3; font-size:15px;">
+      <option value="">全部</option>
+      <option value="新工作" {% if current_status == "新工作" %}selected{% endif %}>新工作</option>
+      <option value="待確認" {% if current_status == "待確認" %}selected{% endif %}>待確認</option>
+      <option value="進行中" {% if current_status == "進行中" %}selected{% endif %}>進行中</option>
+      <option value="上傳成果" {% if current_status == "上傳成果" %}selected{% endif %}>上傳成果</option>
+      <option value="已完成" {% if current_status == "已完成" %}selected{% endif %}>已完成</option>
+    </select>
+    </form>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>標題</th>
+        <th>狀態</th>
+        <th>預算</th>
+        <th>接案人</th>
+      </tr>
+
+      {% for job in jobs %}
+      <tr>
+        <td>{{ job["id"] }}</td>
+        <td><a href="/read/{{ job['id'] }}">{{ job["title"] }}</a></td>
+        <td>{{ job["status"] }}</td>
+        <td>${{ job["budget"] }}</td>
+        <td>{{ job["freelancer_name"] or "尚未選擇" }}</td>
+        <td>
+          <a href="/read/{{ job['id'] }}">查看</a> |
+          <a href="/editJobForm/{{ job['id'] }}">✏️ 編輯</a>
+        </td>
+
+      </tr>
+      {% endfor %}
+    </table>
+  </main>
+
+  <footer>
+    © 2025 <span>工作委託平台</span> | 甲方控制台
+  </footer>
+</body>
+</html>

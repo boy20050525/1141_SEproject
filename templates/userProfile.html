@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ user["username"] }} 的檔案 | 工作委託平台</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    body {
+      margin: 0;
+      background-color: #f7f3ef;
+      color: #3b2f2f;
+    }
+    header {
+      background-color: #e9dfd0;
+      padding: 20px 40px;
+      text-align: center;
+      border-bottom: 2px solid #d4c7b5;
+      position: relative;
+    }
+    header a {
+      position: absolute;
+      left: 40px;
+      top: 20px;
+      color: #7a5e3e;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    header a:hover {
+      text-decoration: underline;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      color: #3e2e1e;
+    }
+    main {
+      max-width: 900px;
+      background-color: #fffdfa;
+      margin: 40px auto;
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 6px 20px rgba(80, 70, 60, 0.15);
+    }
+    .profile-header {
+      background: linear-gradient(135deg, #e9dfd0 0%, #f3e7d8 100%);
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      text-align: center;
+      border: 2px solid #d4c7b5;
+    }
+    .profile-header h2 {
+      margin: 0 0 15px 0;
+      font-size: 28px;
+      color: #3e2e1e;
+    }
+    .profile-header p {
+      margin: 8px 0;
+      color: #6b5a47;
+      font-size: 15px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      background-color: #fffaf3;
+      padding: 25px;
+      border-radius: 10px;
+      text-align: center;
+      border: 2px solid #e2d5c4;
+      transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+      box-shadow: 0 4px 12px rgba(160, 120, 70, 0.2);
+      transform: translateY(-2px);
+    }
+    .stat-card .label {
+      font-size: 13px;
+      color: #8a7a6a;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #c2a676;
+      margin: 10px 0;
+    }
+    .stat-card .stars {
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: #c2a676;
+    }
+    h3 {
+      border-left: 6px solid #c2a676;
+      padding-left: 14px;
+      font-size: 22px;
+      color: #4b3c2b;
+      margin-top: 40px;
+      margin-bottom: 20px;
+    }
+    .reviews-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .review-card {
+      background-color: #fffaf3;
+      padding: 20px;
+      border-radius: 10px;
+      border-left: 4px solid #c2a676;
+      box-shadow: 0 2px 6px rgba(120, 100, 80, 0.1);
+    }
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .reviewer-name {
+      font-weight: 700;
+      color: #3e2e1e;
+      font-size: 16px;
+    }
+    .review-date {
+      font-size: 13px;
+      color: #8a7a6a;
+    }
+    .dimension-scores {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin: 15px 0;
+    }
+    .dimension-score {
+      text-align: center;
+      padding: 12px;
+      background-color: white;
+      border-radius: 8px;
+      border: 1px solid #e2d5c4;
+    }
+    .dimension-score .label {
+      font-size: 12px;
+      color: #8a7a6a;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .dimension-score .stars {
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: #c2a676;
+    }
+    .review-comment {
+      background-color: white;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 3px solid #c2a676;
+      font-size: 14px;
+      font-style: italic;
+      color: #5a5a5a;
+      margin-top: 10px;
+    }
+    .no-reviews {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+      font-size: 16px;
+    }
+    .no-stats {
+      text-align: center;
+      padding: 40px;
+      background-color: #fffaf3;
+      border-radius: 10px;
+      color: #999;
+      font-size: 16px;
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #7a6b5b;
+      background-color: #f1e9de;
+      border-top: 1px solid #d8ccba;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <a href="/">← 返回首頁</a>
+    <h1>👤 用戶檔案</h1>
+  </header>
+
+  <main>
+    <!-- 用戶資訊 -->
+    <div class="profile-header">
+      <h2>{{ user["username"] }}</h2>
+      <p><strong>角色：</strong> {{ user["role"] }}</p>
+      <p><strong>加入時間：</strong> {{ user["created_at_str"] }}</p>
+    </div>
+
+    <!-- 評價統計 -->
+    {% if avg_score is not none or total_ratings > 0 %}
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">評價次數</div>
+          <div class="value">{{ total_ratings }}</div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="label">整體評分</div>
+          <div class="value">{{ avg_score if avg_score else "--" }}</div>
+          <div class="stars">
+            {% if avg_score %}
+              {% for i in range((avg_score | float | round(0)) | int) %}★{% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- 甲方評價維度 -->
+        {% if user["role"] == "甲方" %}
+          <div class="stat-card">
+            <div class="label">需求合理性</div>
+            <div class="value">{{ rating_stats["avg_requirement_rationality"] or "--" }}</div>
+            <div class="stars">
+              {% if rating_stats["avg_requirement_rationality"] %}
+                {% for i in range((rating_stats["avg_requirement_rationality"] | float | round(0)) | int) %}★{% endfor %}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="label">驗收難度</div>
+            <div class="value">{{ rating_stats["avg_verification_difficulty"] or "--" }}</div>
+            <div class="stars">
+              {% if rating_stats["avg_verification_difficulty"] %}
+                {% for i in range((rating_stats["avg_verification_difficulty"] | float | round(0)) | int) %}★{% endfor %}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="label">合作態度</div>
+            <div class="value">{{ rating_stats["avg_client_cooperation"] or "--" }}</div>
+            <div class="stars">
+              {% if rating_stats["avg_client_cooperation"] %}
+                {% for i in range((rating_stats["avg_client_cooperation"] | float | round(0)) | int) %}★{% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- 乙方評價維度 -->
+        {% if user["role"] == "乙方" %}
+          <div class="stat-card">
+            <div class="label">產出品質</div>
+            <div class="value">{{ rating_stats["avg_output_quality"] or "--" }}</div>
+            <div class="stars">
+              {% if rating_stats["avg_output_quality"] %}
+                {% for i in range((rating_stats["avg_output_quality"] | float | round(0)) | int) %}★{% endfor %}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="label">執行效率</div>
+            <div class="value">{{ rating_stats["avg_execution_efficiency"] or "--" }}</div>
+            <div class="stars">
+              {% if rating_stats["avg_execution_efficiency"] %}
+                {% for i in range((rating_stats["avg_execution_efficiency"] | float | round(0)) | int) %}★{% endfor %}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="label">合作態度</div>
+            <div class="value">{{ rating_stats["avg_freelancer_cooperation"] or "--" }}</div>
+            <div class="stars">
+              {% if rating_stats["avg_freelancer_cooperation"] %}
+                {% for i in range((rating_stats["avg_freelancer_cooperation"] | float | round(0)) | int) %}★{% endfor %}
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="no-stats">
+        <p>此用戶尚無評價記錄</p>
+      </div>
+    {% endif %}
+
+    <!-- 評價詳情 -->
+    <h3>📝 評價詳情</h3>
+    {% if reviews and reviews|length > 0 %}
+      <div class="reviews-container">
+        {% for review in reviews %}
+        <div class="review-card">
+          <div class="review-header">
+            <span class="reviewer-name">{{ review["username"] }}</span>
+            <span class="review-date">{{ review["created_at_str"] }}</span>
+          </div>
+
+          <div class="dimension-scores">
+		    <!-- 維度 1 -->
+            <div class="dimension-score">
+              <div class="label">
+			    {% if user["role"] == "甲方" %}
+				  需求合理性
+				{% else %}
+				  產出品質
+				{% endif %}
+			  </div>
+              <div class="stars">
+                {% set score = review["dimension1_score"] | int %}
+                {% for i in range(1, 6) %}
+                  {% if i <= score %}★{% else %}☆{% endif %}
+                {% endfor %}
+              </div>
+            </div>
+            <!-- 維度 2 -->
+            <div class="dimension-score">
+              <div class="label">
+			    {% if user["role"] == "甲方" %}
+				  驗收難度
+				{% else %}
+				  執行效率
+				{% endif %}
+			  </div>
+              <div class="stars">
+                {% set score = review["dimension2_score"] | int %}
+                {% for i in range(1, 6) %}
+                  {% if i <= score %}★{% else %}☆{% endif %}
+                {% endfor %}
+              </div>
+            </div>
+            <!-- 維度 3 -->
+            <div class="dimension-score">
+              <div class="label">
+			    合作態度
+		      </div>
+              <div class="stars">
+                {% set score = review["dimension3_score"] | int %}
+                {% for i in range(1, 6) %}
+                  {% if i <= score %}★{% else %}☆{% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          {% if review["comment"] %}
+          <div class="review-comment">
+            「{{ review["comment"] }}」
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="no-reviews">
+        <p>此用戶尚無收到評價</p>
+      </div>
+    {% endif %}
+  </main>
+
+  <footer>© 2025 工作委託平台 | 用戶檔案</footer>
+</body>
+</html>

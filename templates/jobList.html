@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>工作清單 | 工作委託平台</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background-color: #f7f3ef;
+      color: #3b2f2f;
+      line-height: 1.6;
+    }
+
+    /* ===== Header ===== */
+    header {
+      background-color: #e9dfd0;
+      padding: 18px 50px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #d4c7b5;
+      box-shadow: 0 3px 10px rgba(70, 60, 40, 0.15);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 26px;
+      color: #3e2e1e;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: #4a3825;
+      font-weight: 600;
+      margin-left: 16px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .nav-links a:hover {
+      background-color: #d4c7b5;
+      color: #2c1f11;
+    }
+
+    /* ===== User bar ===== */
+    .user-bar {
+      background-color: #fffaf3;
+      padding: 12px 40px;
+      text-align: center;
+      font-size: 16px;
+      border-bottom: 1px solid #e0d5c5;
+    }
+
+    .user-bar a {
+      display: inline-block;
+      background-color: #c2a676;
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 0 6px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: background-color 0.3s ease, box-shadow 0.3s;
+    }
+
+    .user-bar a:hover {
+      background-color: #a88752;
+      box-shadow: 0 3px 8px rgba(160, 120, 70, 0.3);
+    }
+
+    strong {
+      color: #5a4632;
+      font-weight: 700;
+    }
+
+    /* ===== Main content ===== */
+    main {
+      max-width: 1050px;
+      background-color: #fffdfa;
+      margin: 40px auto;
+      padding: 40px 50px;
+      border-radius: 15px;
+      box-shadow: 0 6px 20px rgba(80, 70, 60, 0.15);
+      animation: fadeIn 0.6s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h3 {
+      border-left: 6px solid #c2a676;
+      padding-left: 12px;
+      font-size: 22px;
+      margin-top: 0;
+      color: #4b3c2b;
+    }
+
+    /* ===== Table ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 12px;
+      overflow: hidden;
+      background-color: #fffaf3;
+      box-shadow: 0 2px 10px rgba(120, 100, 80, 0.1);
+      margin-top: 20px;
+      transition: all 0.3s ease;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      text-align: center;
+      font-size: 15px;
+      border-bottom: 1px solid #e2d5c4;
+    }
+
+    th {
+      background-color: #e9dfd0;
+      color: #3a2a1a;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f6f1ea;
+    }
+
+    tr:hover {
+      background-color: #f3e7d8;
+      transform: scale(1.005);
+      box-shadow: 0 2px 8px rgba(160, 120, 70, 0.2);
+      transition: all 0.2s ease;
+    }
+
+    td a {
+      color: #7a5e3e;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    td a:hover {
+      text-decoration: underline;
+      color: #a88752;
+    }
+
+    /* ===== Footer ===== */
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #7a6b5b;
+      background-color: #f1e9de;
+      border-top: 1px solid #d8ccba;
+    }
+
+    footer span {
+      color: #a88752;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h2>工作委託平台</h2>
+    <div class="nav-links">
+      <a href="/">🏠 首頁</a>
+      <a href="/dashboard_client">📋 控制台</a>
+    </div>
+  </header>
+
+  <div class="user-bar">
+    {% if role %}
+      歡迎，<strong>{{ username }}</strong> 用戶！
+      <a href="/logout">登出</a>
+      {% if role == "甲方" %}
+          <a href="/dashboard_client">我的案件</a>
+          <a href="/addJobForm">新增工作</a>
+      {% else %}
+          <a href="/dashboard_freelancer">我的工作</a>
+      {% endif %}
+    {% else %}
+      <a href="/loginForm">登入</a>
+      <a href="/register">註冊</a>
+    {% endif %}
+  </div>
+
+  <main>
+    <h3> 所有工作清單</h3>
+    <form action="/" method="get" style="margin-bottom: 20px; text-align: right;">
+    <label for="status" style="font-weight:600; color:#5a4632;">狀態分類：</label>
+    <select name="status" id="status" onchange="this.form.submit()" 
+    style="padding: 6px 10px; border-radius: 6px; border: 1px solid #d4c7b5; background-color:#fffaf3; font-size:15px;">
+      <option value="">全部</option>
+      <option value="新工作" {% if current_status == "新工作" %}selected{% endif %}>新工作</option>
+      <option value="待確認" {% if current_status == "待確認" %}selected{% endif %}>待確認</option>
+      <option value="進行中" {% if current_status == "進行中" %}selected{% endif %}>進行中</option>
+      <option value="上傳成果" {% if current_status == "上傳成果" %}selected{% endif %}>上傳成果</option>
+      <option value="已完成" {% if current_status == "已完成" %}selected{% endif %}>已完成</option>
+    </select>
+    </form>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>標題</th>
+        <th>狀態</th>
+        <th>預算</th>
+        <th>委託人</th>
+        <th>接案人</th>
+        <th>操作</th>
+      </tr>
+      {% for job in items %}
+      <tr>
+        <td>{{ job["id"] }}</td>
+        <td><a href="/read/{{ job['id'] }}">{{ job["title"] }}</a></td>
+        <td>{{ job["status"] }}</td>
+        <td>${{ job["budget"] }}</td>
+        <td>{{ job["client_name"] or "N/A" }}</td>
+        <td>{{ job["freelancer_name"] or "尚未選擇" }}</td>
+        <td><a href="/read/{{ job['id'] }}">查看</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </main>
+
+  <footer>
+    © 2025 <span>工作委託平台</span> | 任務清單頁
+  </footer>
+</body>
+</html>
