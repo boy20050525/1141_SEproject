@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>新增工作 | 工作委託平台</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      background: linear-gradient(135deg, #f6f2ec, #ece3d3, #e1d2b8);
+      background-size: 300% 300%;
+      animation: gradientShift 10s ease infinite;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .form-container {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(210, 190, 160, 0.6);
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(100, 90, 70, 0.2);
+      width: 480px;
+      padding: 40px 50px;
+      color: #4b3a2a;
+      animation: fadeIn 1s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      text-align: center;
+      color: #3e2e1e;
+      font-size: 26px;
+      margin-bottom: 25px;
+      letter-spacing: 1px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      color: #5a4632;
+      margin-bottom: 6px;
+      margin-top: 15px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 10px;
+      border: 1px solid #d4c7b5;
+      background-color: rgba(255, 255, 255, 0.9);
+      outline: none;
+      font-size: 15px;
+      color: #3b2f2f;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #c2a676;
+      box-shadow: 0 0 10px rgba(190, 160, 120, 0.4);
+      background-color: #ffffff;
+    }
+
+    textarea {
+      resize: none;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 25px;
+      background: linear-gradient(to right, #c2a676, #b89668, #a88752);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(170, 135, 82, 0.3);
+    }
+
+    p {
+      text-align: center;
+      margin-top: 20px;
+      color: #6b5a4a;
+      font-size: 14px;
+    }
+
+    a {
+      color: #a88752;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      color: #8c713e;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="form-container">
+    <h2>🧾 新增工作</h2>
+
+    <form action="/addJob" method="post" enctype="multipart/form-data">
+      <label>標題：</label>
+      <input type="text" name="title" placeholder="請輸入案件標題" required>
+
+      <label>內容描述：</label>
+      <textarea name="content" rows="5" placeholder="請輸入工作內容或需求" required></textarea>
+
+      <label>預算金額：</label>
+      <input type="number" name="budget" placeholder="請輸入預算金額 (NT$)" required>
+
+      <label>需求文件（可上傳 PDF/DOCX/TXT）：</label>
+      <input type="file" name="requirement_file" accept=".pdf,.docx,.txt">
+
+      <button type="submit">📤 送出工作</button>
+    </form>
+
+    <p><a href="/">🏠 回首頁</a></p>
+  </div>
+</body>
+</html>

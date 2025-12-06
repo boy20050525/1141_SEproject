@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>忘記密碼 | 工作委託平台</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f6f2ec, #ece3d3, #e1d2b8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Noto Sans TC', sans-serif;
+      color: #4b3a2a;
+    }
+    .form-box {
+      background: rgba(255,255,255,0.7);
+      padding: 40px 50px;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(80,70,60,0.2);
+      text-align: center;
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #d4c7b5;
+      margin-top: 12px;
+    }
+    button {
+      background: linear-gradient(to right, #c2a676, #a88752);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover { box-shadow: 0 5px 15px rgba(170,135,82,0.3); }
+  </style>
+</head>
+<body>
+  <div class="form-box">
+    <h2>🔐 忘記密碼</h2>
+    <form action="/forgot" method="post">
+      <label>請輸入您的 Email：</label>
+      <input type="email" name="email" required>
+      <button type="submit">寄送重設連結</button>
+    </form>
+    <p><a href="/loginForm.html">返回登入</a></p>
+  </div>
+</body>
+</html>

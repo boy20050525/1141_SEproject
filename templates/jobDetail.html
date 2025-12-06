@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ job["title"] }} - 案件詳情</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* 保留您原本的 CSS */
+    * { box-sizing: border-box; font-family: 'Noto Sans TC', sans-serif; }
+    body { margin: 0; background-color: #f7f3ef; color: #3b2f2f; line-height: 1.6; }
+    header { background-color: #e9dfd0; padding: 20px 40px; text-align: center; border-bottom: 2px solid #d4c7b5; }
+    header h2 { margin: 0; font-size: 28px; color: #3e2e1e; }
+    main { max-width: 900px; background-color: #fffdfa; margin: 40px auto; padding: 35px 45px; border-radius: 15px; box-shadow: 0 5px 18px rgba(80, 70, 60, 0.15); }
+    h3 { border-left: 6px solid #c2a676; padding-left: 12px; font-size: 22px; margin-top: 35px; color: #4b3c2b; }
+    p { font-size: 16px; margin-bottom: 8px; }
+    a { color: #7a5e3e; text-decoration: none; font-weight: 600; }
+    a:hover { text-decoration: underline; color: #5a4632; }
+    hr { border: none; border-top: 2px solid #e4d6c4; margin: 30px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; background-color: #fffaf3; }
+    th, td { padding: 12px 15px; text-align: center; border: 1px solid #e2d5c4; }
+    th { background-color: #e9dfd0; }
+    input[type="number"], input[type="text"], input[type="file"], textarea { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cdbda3; margin-top: 6px; }
+    button { background-color: #c2a676; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 5px;}
+    button:hover { background-color: #a88752; }
+    .danger-btn { background-color: #ef4444; }
+    .danger-btn:hover { background-color: #c53030; }
+    .success-btn { background-color: #10b981; } 
+    .success-btn:hover { background-color: #059669; }
+
+    /* Issue Tracker 特有樣式 */
+    .issue-box {
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        background-color: #fff;
+    }
+    .issue-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    .status-tag {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    .status-open { background-color: #fee2e2; color: #b91c1c; } /* 紅色未解決 */
+    .status-resolved { background-color: #d1fae5; color: #047857; } /* 綠色已解決 */
+    
+    .comment-list { margin-left: 20px; border-left: 3px solid #f3f4f6; padding-left: 15px; }
+    .comment-item { margin-bottom: 15px; background-color: #f9fafb; padding: 10px; border-radius: 8px; }
+    .comment-meta { font-size: 13px; color: #6b7280; margin-bottom: 5px; }
+    .comment-content { color: #1f2937; }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h2>{{ job["title"] }}</h2>
+  </header>
+
+  <main>
+    <p><b>內容：</b> {{ job["content"] }}</p>
+    <p><b>狀態：</b> 
+        <span style="color: #c2a676; font-weight: bold;">{{ job["status"] }}</span>
+    </p>
+    <p><b>預算：</b> ${{ job["budget"] }}</p>
+    <p><b>委託人：</b> {{ job["client_name"] }}</p>
+    <p><b>接案人：</b> {{ job["freelancer_name"] or "尚未選擇" }}</p>
+    
+    {% if job["requirement_file"] %}
+    <p><b>需求文件：</b>
+      <a href="/download_requirement/{{ job['id'] }}" target="_blank">📄 下載需求檔</a>
+    </p>
+    {% endif %}
+
+    <hr>
+
+    {% set role = request.session.get("role") %}
+    {% set user_id = request.session.get("user_id") %}
+    {% set my_username = request.session.get("username") %}
+
+    <p>
+      <a href="/">🏠 回首頁</a>　
+      {% if role == "甲方" %}
+        <a href="/dashboard_client">📂 回控制台</a>
+      {% elif role == "乙方" %}
+        <a href="/dashboard_freelancer">🛠️ 回控制台</a>
+      {% endif %}
+    </p>
+
+    {% if role == "乙方" and (job["status"] == "新工作" or job["status"] == "待確認") %}
+    <h3>💰 我要報價</h3>
+    <form action="/bid" method="post">
+      <input type="hidden" name="job_id" value="{{ job['id'] }}">
+      <label>報價金額：</label>
+      <input type="number" name="amount" min="{{ job['budget'] }}" required>
+      <button type="submit">📤 送出報價</button>
+    </form>
+    {% endif %}
+
+    {% if (role == "甲方" or role == "乙方") and (job["status"] == "新工作" or job["status"] == "待確認") %}
+        {% if bids %}
+        <h3>📊 報價紀錄</h3>
+        <table>
+        <tr><th>乙方</th><th>金額</th><th>時間</th>{% if role == "甲方" %}<th>操作</th>{% endif %}</tr>
+        {% for bid in bids %}
+        <tr>
+            <td>{{ bid["username"] }}</td>
+            <td>${{ bid["amount"] }}</td>
+            <td>{{ bid["created_at"] }}</td>
+            {% if role == "甲方" %}
+            <td>
+            <form action="/chooseBid" method="post">
+                <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                <input type="hidden" name="freelancer_id" value="{{ bid['bidder_id'] }}">
+                <button type="submit">✅ 選擇此人</button>
+            </form>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+        </table>
+        {% endif %}
+    {% endif %}
+
+
+    {% if job["status"] in ["上傳成果", "已完成"] %}
+        <h3>📦 成果交付</h3>
+        <div style="background:#fdf6e3; padding:15px; border-radius:8px; border:1px solid #eee8d5;">
+            <p><b>最新上傳時間：</b> {{ deliverable["uploaded_at"] if deliverable else "未知" }}</p>
+            <p>
+                <a href="/download/{{ job['id'] }}" style="font-size:18px;">📥 下載乙方交付的檔案</a>
+            </p>
+        </div>
+    {% endif %}
+
+    {% if role == "乙方" and (job["status"] == "進行中" or job["status"] == "上傳成果") and job["freelancer_name"] == my_username %}
+        <h3>📤 上傳/更新成果</h3>
+        <form action="/api/upload" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="job_id" value="{{ job['id'] }}">
+            <input type="file" name="uploadedFile" required>
+            <button type="submit">🚀 上傳檔案 (這將更新案件狀態)</button>
+        </form>
+    {% endif %}
+
+
+    {% if job["status"] in ["上傳成果", "已完成"] %}
+        
+        <h3 style="border-left-color: #ef4444;">🐞 問題追蹤 (Issue Tracker)</h3>
+        
+        {% if issues %}
+            {% for issue in issues %}
+            <div class="issue-box" style="{{ 'border-color:#10b981;' if issue['status']=='已解決' else 'border-color:#fca5a5;' }}">
+                <div class="issue-header">
+                    <div>
+                        <span class="status-tag {{ 'status-resolved' if issue['status']=='已解決' else 'status-open' }}">
+                            {{ issue['status'] }}
+                        </span>
+                        <strong style="font-size:18px; margin-left:8px;">{{ issue['title'] }}</strong>
+                        <div style="font-size:13px; color:#888; margin-top:4px;">
+                            由 {{ issue['creator_name'] }} 建立於 {{ issue['created_at'] }}
+                        </div>
+                    </div>
+                    
+                    {% if role == "甲方" and issue['status'] == '未解決' %}
+                    <form action="/api/resolveIssue" method="post">
+                        <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                        <input type="hidden" name="issue_id" value="{{ issue['id'] }}">
+                        <button type="submit" class="success-btn">✨ 標記為已解決</button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                <div class="comment-list">
+                    {% for comment in issue["comments"] %}
+                    <div class="comment-item">
+                        <div class="comment-meta">
+                            <b>{{ comment["username"] }} ({{ comment["role"] }})</b> 
+                            <span> • {{ comment["created_at"] }}</span>
+                        </div>
+                        <div class="comment-content">{{ comment["content"] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if issue['status'] == '未解決' and (role == "甲方" or (role == "乙方" and job["freelancer_name"] == my_username)) %}
+                <form action="/api/addComment" method="post" style="margin-top:15px; display:flex; gap:10px;">
+                    <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                    <input type="hidden" name="issue_id" value="{{ issue['id'] }}">
+                    <input type="text" name="content" placeholder="輸入回覆..." required style="margin-top:0; flex-grow:1;">
+                    <button type="submit" style="margin-top:0; padding:8px 15px;">💬 回覆</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:#666;">目前沒有任何待解決事項。</p>
+        {% endif %}
+
+        {% if role == "甲方" and job["status"] != "已完成" %}
+        <div style="background-color:#fff3cd; padding:15px; border-radius:10px; margin-top:20px;">
+            <h4 style="margin-top:0; color:#856404;">📝 新增待解決事項 (Issue)</h4>
+            <form action="/api/addIssue" method="post">
+                <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                <input type="text" name="title" placeholder="請簡述問題 (例如：Logo 顏色需調整...)" required>
+                <button type="submit" style="background-color:#e0a800;">➕ 建立 Issue</button>
+            </form>
+        </div>
+        {% endif %}
+
+    {% endif %}
+
+
+    {% if role == "甲方" and job["status"] == "上傳成果" %}
+        <hr>
+        <div style="text-align:center; margin-top:30px;">
+            <h3>🏁 專案結案</h3>
+            <p>請確認所有 Issue 皆已標記為「已解決」後，才可點擊結案。</p>
+            
+            <form action="/completeJob" method="post">
+                <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                <button type="submit" class="success-btn" style="padding:15px 30px; font-size:18px;">🎉 確認專案驗收完成 (結案)</button>
+            </form>
+        </div>
+    {% endif %}
+
+    {% if job["status"] == "已完成" %}
+    <hr>
+    <div style="text-align:center; color:green; padding:20px; background:#e6fffa; border-radius:10px;">
+        <h2>✅ 案件圓滿結案！</h2>
+        <p>感謝雙方的合作。</p>
+    </div>
+    {% endif %}
+
+  </main>
+
+  <footer>© 2025 工作委託平台 | 案件詳情頁</footer>
+</body>
+</html>
