@@ -156,6 +156,9 @@
     <p><b>內容：</b> {{ job["content"] }}</p>
     <p><b>狀態：</b> {{ job["status"] }}</p>
     <p><b>預算：</b> ${{ job["budget"] }}</p>
+    {% if job["deadline"] %}
+    <p><b>競標截止：</b> {{ job["deadline"] }}</p>
+    {% endif %}
     <p><b>委託人：</b> {{ job["client_name"] }}</p>
     <p><b>接案人：</b> {{ job["freelancer_name"] or "尚未選擇" }}</p>
     
@@ -182,13 +185,18 @@
     </p>
 
     {% if role == "乙方" and (job["status"] == "新工作" or job["status"] == "待確認") %}
-    <h3>💰 我要報價</h3>
-    <form action="/bid" method="post">
+    {% if not is_expired %}<h3>💰 我要報價</h3>
+    <form action="/bid" method="post" enctype="multipart/form-data">
       <input type="hidden" name="job_id" value="{{ job['id'] }}">
       <label>請輸入你願意接案的價格：</label><br>
       <input type="number" name="amount" min="{{ job['budget'] }}" required><br><br>
+      <label>提案計畫書（限 PDF 格式）：</label><br>
+      <input type="file" name="proposal_file" accept=".pdf" required><br><br>
       <button type="submit">📤 送出報價</button>
     </form>
+    {% else %}
+      <p style="color: red; font-weight: bold;">🚫 **競標已於 {{ job["deadline"] }} 截止，無法再報價。**</p>
+    {% endif %}
 
     {% if bids %}
     <h4>📊 目前已報價乙方：</h4>
@@ -229,6 +237,13 @@
         <td>${{ bid["amount"] }}</td>
         <td>{{ bid["created_at"] }}</td>
         <td>
+        {% if bid["proposal_file"] %}
+          <a href="/download_proposal/{{ bid['bid_id'] }}" target="_blank">📄 下載提案</a>
+          {% else %}
+          -
+          {% endif %}
+        </td>
+        <td>
           <form action="/chooseBid" method="post">
             <input type="hidden" name="job_id" value="{{ job['id'] }}">
             <input type="hidden" name="freelancer_id" value="{{ bid['bidder_id'] }}">
@@ -244,6 +259,41 @@
     {% endif %}
 
     {% if role == "乙方" and job["status"] == "進行中" and job["freelancer_name"] == request.session.get("username") %}
+    {% if deliverables %}
+
+    <h3>🗂️ 成果版本歷史紀錄</h3>
+    <table style="margin-bottom: 20px;">
+      <tr>
+        <th>版本</th>
+        <th>上傳者</th>
+        <th>上傳時間</th>
+        <th>備註/狀態</th>
+        <th>檔案下載</th>
+      </tr>
+      {% for item in deliverables %}
+      <tr>
+        <td>v{{ loop.index }}</td> 
+        <td>{{ item["uploader_name"] }}</td>
+        <td>{{ item["uploaded_at"] }}</td>
+        <td>
+          {% if item["reject_reason"] %}
+            <span style="color: #ef4444; font-weight: bold;">❌ 被退件</span>
+          {% else %}
+            <span style="color: green;">✔ 已上傳</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if loop.last %}
+            <a href="/download/{{ job['id'] }}" class="btn" style="padding:5px 10px; background:#c2a676; color:white; border-radius:4px;">📥 下載此版本</a>
+          {% else %}
+            <span style="color:#999;">(歷史版本)</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+    
     <h3>📦 上傳成果</h3>
     <form action="/api/upload" method="post" enctype="multipart/form-data">
       <input type="hidden" name="job_id" value="{{ job['id'] }}">
@@ -253,6 +303,41 @@
     {% endif %}
 
     {% if role == "甲方" and job["status"] == "上傳成果" %}
+
+    {% if deliverables %}
+
+    <h3>🗂️ 成果版本歷史紀錄</h3>
+    <table style="margin-bottom: 20px;">
+      <tr>
+        <th>版本</th>
+        <th>上傳者</th>
+        <th>上傳時間</th>
+        <th>備註/狀態</th>
+        <th>檔案下載</th>
+      </tr>
+      {% for item in deliverables %}
+      <tr>
+        <td>v{{ loop.index }}</td> <td>{{ item["uploader_name"] }}</td>
+        <td>{{ item["uploaded_at"] }}</td>
+        <td>
+          {% if item["reject_reason"] %}
+            <span style="color: #ef4444; font-weight: bold;">❌ 被退件</span>
+          {% else %}
+            <span style="color: green;">✔ 已上傳</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if loop.last %}
+            <a href="/download/{{ job['id'] }}" class="btn" style="padding:5px 10px; background:#c2a676; color:white; border-radius:4px;">📥 下載此版本</a>
+          {% else %}
+            <span style="color:#999;">(歷史版本)</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
     <h3>📦 成果審核區</h3>
     <p><a href="/download/{{ job['id'] }}">📥 下載乙方上傳的成果檔案</a></p>
 

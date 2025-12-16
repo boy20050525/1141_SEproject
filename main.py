@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from sessionLogin import router as login_router
 from fastapi import File, UploadFile
+from datetime import datetime
 
 import os
 import time
@@ -94,8 +95,21 @@ async def readJob(request: Request, id: int, conn=Depends(getDB)):
     # 競標清單（乙方報價）
     bids = await jobs.getBids(conn, id)
 
+    # === 修改開始 ===
     # 上傳成果（乙方已交付的檔案資訊）
-    deliverable = await jobs.getDeliverable(conn, id)
+    # 修改：使用 getDeliverables (複數) 抓取該案件的所有歷史版本
+    deliverables = await jobs.getDeliverables(conn, id)
+
+    # 為了相容前端原本使用 "deliverable" 來判斷是否有退件原因
+    # 我們取列表中的最後一筆（最新版）當作目前的狀態
+    latest_deliverable = deliverables[-1] if deliverables else None
+    # === 修改結束 ===
+
+    # ⚠️ 截止日期檢查
+    is_expired = False
+    if jobDetail and jobDetail.get("deadline"):
+        # 簡單的時間比較邏輯
+        is_expired = datetime.now() > jobDetail["deadline"]
 
     # 傳到模板 jobDetail.html
     return templates.TemplateResponse(
@@ -104,7 +118,9 @@ async def readJob(request: Request, id: int, conn=Depends(getDB)):
             "request": request,
             "job": jobDetail,
             "bids": bids,
-            "deliverable": deliverable
+            "is_expired": is_expired,
+            "deliverables": deliverables,      # 🆕 新增：傳入完整歷史清單給前端表格使用
+            "deliverable": latest_deliverable  # 🔄 保留：傳入最新一筆 (維持舊有邏輯相容性，例如退件紅字顯示)
         }
     )
 
@@ -126,6 +142,7 @@ async def add_job(
     title: str = Form(...),
     content: str = Form(...),
     budget: int = Form(...),
+    deadline: str = Form(...), # 👈 新增 deadline 接收
     requirement_file: UploadFile = File(None),   # 👈 新增上傳檔案
     conn=Depends(getDB)
 ):
@@ -136,14 +153,33 @@ async def add_job(
         raise HTTPException(status_code=403, detail="只有甲方可新增工作")
 
     file_path = None
-    if requirement_file:
+    # ⚠️ 修改：檢查檔案是否存在且名稱不為空
+    if requirement_file and requirement_file.filename:
         upload_dir = "uploads/requirements"
+        
+        # 1. 確保資料夾存在
         os.makedirs(upload_dir, exist_ok=True)
-        file_path = os.path.join(upload_dir, requirement_file.filename)
-        with open(file_path, "wb") as f:
-            f.write(await requirement_file.read())
+        
+        # 2. 確保安全檔名：使用時間戳 + 原始檔名
+        # 移除檔名中可能導致路徑問題的字元 (例如: / 或 \)
+        safe_filename = requirement_file.filename.split('/')[-1].split('\\')[-1]
+        
+        # 加上時間戳，確保唯一性
+        safe_filename = f"{int(time.time())}_{safe_filename}"
+        
+        # 3. 組合檔案路徑
+        file_path = os.path.join(upload_dir, safe_filename)
 
-    await jobs.addJob(conn, title, content, budget, user_id, file_path)
+        # 4. 寫入檔案
+        try:
+            with open(file_path, "wb") as f:
+                # 寫入檔案內容
+                f.write(await requirement_file.read())
+        except Exception as e:
+            # 如果寫入失敗，回傳詳細錯誤訊息
+            raise HTTPException(status_code=500, detail=f"檔案寫入失敗: {e}")
+        
+    await jobs.addJob(conn, title, content, budget, user_id, file_path, deadline)
     return RedirectResponse(url="/dashboard_client", status_code=302)
 
 # =============================
@@ -336,12 +372,14 @@ async def reject_job(
 
 
 
-# === 乙方出價 ===
+# === 乙方出價（修改，處理檔案上傳）===
 @app.post("/bid")
 async def bid_job(
     request: Request,
     job_id: int = Form(...),
     amount: int = Form(...),
+    # ⚠️ 新增提案檔案，限 pdf 格式，故 accept 僅需檢查 pdf (前端仍需處理其他格式)
+    proposal_file: UploadFile = File(None), 
     conn=Depends(getDB)
 ):
     bidder_id = request.session.get("user_id")
@@ -350,7 +388,34 @@ async def bid_job(
     if role != "乙方":
         return HTMLResponse("⚠️ 只有乙方可以競標", status_code=403)
 
-    result = await jobs.placeBid(conn, job_id, bidder_id, amount)
+    file_path = None
+    if proposal_file and proposal_file.filename:
+        # ⚠️ 檔案格式檢查：強制要求 PDF
+        if not proposal_file.filename.lower().endswith('.pdf'):
+            return HTMLResponse("⚠️ 提案計畫書必須是 PDF 格式。", status_code=400)
+            
+        upload_dir = "uploads/proposals" # 專門的提案檔案目錄
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 檔案名稱處理：使用 job_id, bidder_id, 時間戳，確保唯一性
+        # 解決不同人上傳同名檔案不可覆蓋的問題
+        safe_filename = proposal_file.filename.split('/')[-1].split('\\')[-1]
+        safe_filename = f"job{job_id}_bidder{bidder_id}_{int(time.time())}_{safe_filename}"
+        
+        file_path = os.path.join(upload_dir, safe_filename)
+
+        try:
+            with open(file_path, "wb") as f:
+                f.write(await proposal_file.read())
+        except Exception as e:
+            return HTMLResponse(f"⚠️ 檔案寫入失敗：{e}", status_code=500)
+    else:
+         # 提案計畫書為必傳
+         return HTMLResponse("⚠️ 提案時需上傳提案計畫書。", status_code=400)
+
+    # 呼叫 placeBid 傳入檔案路徑
+    result = await jobs.placeBid(conn, job_id, bidder_id, amount, file_path)
+
     if result == "too_low":
         return HTMLResponse("⚠️ 出價必須高於原始預算", status_code=400)
     elif result == "job_not_found":
@@ -358,6 +423,24 @@ async def bid_job(
 
     return RedirectResponse(url=f"/read/{job_id}", status_code=302)
 
+# === 下載競標提案文件 (新增) ===
+@app.get("/download_proposal/{bid_id}")
+async def download_proposal(bid_id: int, conn=Depends(getDB)):
+    # 從 bids 表中根據 bid_id 查 proposal_file
+    async with conn.cursor() as cur:
+        # ⚠️ 假設 getBids 返回的 row 中有 bid_id (jobs.py 中已修改)
+        await cur.execute("SELECT proposal_file FROM bids WHERE id=%s;", (bid_id,))
+        bid = await cur.fetchone()
+        
+    if not bid or not bid["proposal_file"]:
+        return HTMLResponse("⚠️ 該報價未提供提案文件", status_code=404)
+
+    file_path = bid["proposal_file"]
+    if not os.path.exists(file_path):
+        return HTMLResponse("❌ 找不到檔案", status_code=404)
+
+    filename = os.path.basename(file_path)
+    return FileResponse(file_path, filename=filename)
 
 # === 甲方選擇乙方 ===
 @app.post("/chooseBid")

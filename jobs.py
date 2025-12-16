@@ -57,6 +57,7 @@ async def getJob(conn, job_id):
         sql = """
         SELECT 
             j.id, j.title, j.content, j.status, j.budget, j.price,
+            j.deadline,
             j.requirement_file,
             c.username AS client_name,
             f.username AS freelancer_name,
@@ -74,17 +75,17 @@ async def getJob(conn, job_id):
 # ---------------------------------
 # 3️⃣ 新增工作 (甲方建立)
 # ---------------------------------
-async def addJob(conn, title, content, budget, client_id, requirement_file=None):
+async def addJob(conn, title, content, budget, client_id, requirement_file=None, deadline=None):
     async with conn.cursor() as cur:
         sql = """
-        INSERT INTO jobs (title, content, budget, client_id, status, requirement_file)
-        VALUES (%s, %s, %s, %s, '新工作', %s);
+        INSERT INTO jobs (title, content, budget, client_id, status, requirement_file, deadline)
+        VALUES (%s, %s, %s, %s, '新工作', %s, %s);
         """
-        await cur.execute(sql, (title, content, budget, client_id, requirement_file))
+        # ⚠️ 修復處：確保傳入 7 個參數
+        await cur.execute(sql, (title, content, budget, client_id, requirement_file, deadline))
         await conn.commit()
         return True
-
-
+    
 # ---------------------------------
 # 4️⃣ 刪除工作 (甲方刪除)
 # ---------------------------------
@@ -179,7 +180,7 @@ async def getDeliverables(conn, job_id):
     async with conn.cursor() as cur:
         sql = """
         SELECT 
-            d.id, d.file_path, d.uploaded_by, u.username AS uploader_name, d.uploaded_at
+            d.id, d.file_path, d.uploaded_by, u.username AS uploader_name, d.uploaded_at, d.reject_reason
         FROM deliverables d
         LEFT JOIN users u ON d.uploaded_by = u.id
         WHERE d.job_id = %s
@@ -264,7 +265,7 @@ async def getDeliverable(conn, job_id):
         row = await cur.fetchone()
         return row
     
-# === 取得競標列表 ===
+# === 取得競標列表（修改，新增 proposal_file 欄位）===
 async def getBids(conn, job_id):
     async with conn.cursor() as cur:
         sql = """
@@ -273,7 +274,8 @@ async def getBids(conn, job_id):
             u.id AS bidder_id,
             u.username, 
             b.amount, 
-            b.created_at
+            b.created_at,
+            b.proposal_file  /* ⚠️ 新增 proposal_file */
         FROM bids b
         JOIN users u ON b.bidder_id = u.id
         WHERE b.job_id = %s
@@ -284,8 +286,8 @@ async def getBids(conn, job_id):
         return rows
 
 
-# === 乙方出價 ===
-async def placeBid(conn, job_id, bidder_id, amount):
+# === 乙方出價（修改，新增 proposal_file 參數）===
+async def placeBid(conn, job_id, bidder_id, amount, proposal_file=None): # 👈 新增 proposal_file
     async with conn.cursor() as cur:
         # 1️⃣ 查案件預算
         await cur.execute("SELECT budget FROM jobs WHERE id=%s;", (job_id,))
@@ -298,13 +300,14 @@ async def placeBid(conn, job_id, bidder_id, amount):
         # 2️⃣ 刪除該乙方舊報價
         await cur.execute("DELETE FROM bids WHERE job_id=%s AND bidder_id=%s;", (job_id, bidder_id))
 
-        # 3️⃣ 插入新報價
+        # 3️⃣ 插入新報價（修改 SQL，新增 proposal_file）
+        # ⚠️ 假設 bids 資料表有 proposal_file 欄位
         await cur.execute("""
-            INSERT INTO bids (job_id, bidder_id, amount)
-            VALUES (%s, %s, %s);
-        """, (job_id, bidder_id, amount))
+            INSERT INTO bids (job_id, bidder_id, amount, proposal_file) 
+            VALUES (%s, %s, %s, %s);  
+        """, (job_id, bidder_id, amount, proposal_file)) # 👈 傳入 proposal_file
 
-        # ✅ 4️⃣ 更新 job 狀態為「待確認」
+        # ✅ 4️⃣ 更新 job 狀態為「報價中」
         await cur.execute("""
             UPDATE jobs
             SET status = '待確認'
