@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>編輯案件</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f7f3ef;
+      font-family: 'Noto Sans TC', sans-serif;
+      color: #3b2f2f;
+      padding: 40px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #fffdfa;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(100, 90, 70, 0.2);
+      padding: 30px;
+    }
+    h2 {
+      text-align: center;
+      color: #4b3c2b;
+    }
+    label {
+      font-weight: 600;
+      color: #5a4632;
+      display: block;
+      margin-top: 15px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #d4c7b5;
+      margin-top: 8px;
+    }
+    button {
+      margin-top: 25px;
+      width: 100%;
+      background: linear-gradient(to right, #c2a676, #b89668);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: linear-gradient(to right, #b89668, #a88752);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>✏️ 編輯案件</h2>
+    <form action="/editJob" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="job_id" value="{{ job['id'] }}">
+
+      <label>標題：</label>
+      <input type="text" name="title" value="{{ job['title'] }}" required>
+
+      <label>內容描述：</label>
+      <textarea name="content" rows="5" required>{{ job['content'] }}</textarea>
+
+      <label>預算金額：</label>
+      <input type="number" name="budget" value="{{ job['budget'] }}" required>
+
+      <label>需求文件（可重新上傳）：</label>
+      <input type="file" name="requirement_file">
+
+      <button type="submit">💾 儲存變更</button>
+    </form>
+  </div>
+</body>
+</html>

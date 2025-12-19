@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>登入系統 | 工作委託平台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      background: linear-gradient(135deg, #f6f2ec, #ece3d3, #e1d2b8);
+      background-size: 300% 300%;
+      animation: gradientShift 10s ease infinite;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ===== 登入容器 ===== */
+    .login-container {
+      width: 400px;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(220, 210, 190, 0.6);
+      backdrop-filter: blur(18px);
+      border-radius: 18px;
+      padding: 50px 55px;
+      text-align: center;
+      color: #5a4632;
+      box-shadow: 0 8px 25px rgba(80, 70, 60, 0.2);
+      animation: fadeIn 1s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: #4b3a2a;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #7a6b5b;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: #5a4a36;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 10px;
+      border: 1px solid #d4c7b5;
+      outline: none;
+      font-size: 15px;
+      margin-bottom: 15px;
+      background-color: rgba(255, 255, 255, 0.9);
+      color: #3b2f2f;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      box-shadow: 0 0 10px rgba(200, 180, 150, 0.5);
+      border-color: #c2a676;
+    }
+
+    .form-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+
+    .form-footer a {
+      color: #a88752;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+
+    .form-footer a:hover {
+      color: #8c713e;
+      text-decoration: underline;
+    }
+
+    button {
+      width: 100%;
+      background: linear-gradient(to right, #c2a676, #b89668, #a88752);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(170, 135, 82, 0.3);
+    }
+
+    p {
+      margin-top: 25px;
+      color: #6b5a4a;
+      font-size: 14px;
+    }
+
+    a {
+      color: #a88752;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+
+    a:hover {
+      color: #8c713e;
+      text-decoration: underline;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 10px;
+      width: 100%;
+      text-align: center;
+      font-size: 13px;
+      color: #7a6b5b;
+      letter-spacing: 0.5px;
+    }
+
+    footer span {
+      color: #a88752;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-container">
+    <div class="logo">🧾 工作委託平台</div>
+    <div class="subtitle">請登入以進入系統</div>
+
+    <form action="/login" method="post">
+      <label>帳號</label>
+      <input type="text" name="username" placeholder="請輸入帳號" required>
+
+      <label>密碼</label>
+      <input type="password" name="password" placeholder="請輸入密碼" required>
+
+      <div class="form-footer">
+        <a href="/forgot">忘記密碼？</a>
+      </div>
+
+      <button type="submit">登入</button>
+    </form>
+
+    <p>還沒有帳號嗎？ <a href="/register">立即建立新帳號</a></p>
+  </div>
+
+  <footer>© 2025 <span>工作委託平台</span> | 登入系統</footer>
+</body>
+</html>

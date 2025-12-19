@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ job["title"] }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* --- 基礎樣式 --- */
+    * {
+      box-sizing: border-box;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background-color: #f7f3ef;
+      color: #3b2f2f;
+      line-height: 1.6;
+    }
+
+    header {
+      background-color: #e9dfd0;
+      padding: 20px 40px;
+      text-align: center;
+      border-bottom: 2px solid #d4c7b5;
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 28px;
+      color: #3e2e1e;
+    }
+
+    main {
+      max-width: 900px;
+      background-color: #fffdfa;
+      margin: 40px auto;
+      padding: 35px 45px;
+      border-radius: 15px;
+      box-shadow: 0 5px 18px rgba(80, 70, 60, 0.15);
+    }
+
+    h3 {
+      border-left: 6px solid #c2a676;
+      padding-left: 12px;
+      font-size: 22px;
+      margin-top: 35px;
+      color: #4b3c2b;
+    }
+
+    h4 {
+        margin-top: 20px;
+        color: #4b3c2b;
+    }
+
+    p {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    a {
+      color: #7a5e3e;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      text-decoration: underline;
+      color: #5a4632;
+    }
+
+    hr {
+      border: none;
+      border-top: 2px solid #e4d6c4;
+      margin: 30px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden;
+      background-color: #fffaf3;
+      box-shadow: 0 2px 10px rgba(120, 100, 80, 0.1);
+      margin-top: 15px;
+      margin-bottom: 25px;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      text-align: center;
+      font-size: 15px;
+      border: 1px solid #e2d5c4;
+    }
+
+    th {
+      background-color: #e9dfd0;
+      color: #3a2a1a;
+      font-weight: 700;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f6f1ea;
+    }
+
+    tr:hover {
+      background-color: #f0e4d5;
+      transition: background-color 0.2s ease;
+    }
+
+    input[type="number"],
+    input[type="text"],
+    input[type="file"],
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #cdbda3;
+      background-color: #fffdf9;
+      margin-top: 6px;
+      font-size: 15px;
+    }
+
+    button {
+      background-color: #c2a676;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      transition: background-color 0.3s;
+      margin-top: 5px;
+    }
+
+    button:hover {
+      background-color: #a88752;
+    }
+
+    .danger-btn {
+      background-color: #ef4444;
+      color: white;
+    }
+
+    .danger-btn:hover {
+      background-color: #c53030;
+    }
+
+    /* --- Issue Tracker 樣式 --- */
+    .success-btn { background-color: #10b981; color: white; } 
+    .success-btn:hover { background-color: #059669; }
+
+    .issue-box {
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        background-color: #fff;
+    }
+    .issue-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    .status-tag {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    .status-open { background-color: #fee2e2; color: #b91c1c; } /* 紅色未解決 */
+    .status-resolved { background-color: #d1fae5; color: #047857; } /* 綠色已解決 */
+    
+    .comment-list { margin-left: 20px; border-left: 3px solid #f3f4f6; padding-left: 15px; }
+    .comment-item { margin-bottom: 15px; background-color: #f9fafb; padding: 10px; border-radius: 8px; }
+    .comment-meta { font-size: 13px; color: #6b7280; margin-bottom: 5px; }
+    .comment-content { color: #1f2937; }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #7a6b5b;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h2>{{ job["title"] }}</h2>
+  </header>
+
+  <main>
+    <p><b>內容：</b> {{ job["content"] }}</p>
+    <p><b>狀態：</b> <span style="color: #c2a676; font-weight: bold;">{{ job["status"] }}</span></p>
+    <p><b>預算：</b> ${{ job["budget"] }}</p>
+    {% if job["deadline"] %}
+    <p><b>競標截止：</b> {{ job["deadline"] }}</p>
+    {% endif %}
+    <p><b>委託人：</b> {% if job['client_id'] %}
+        <a href="/api/userProfile/{{ job['client_id'] }}" style="color:#7a5e3e; text-decoration:none; font-weight:600;">
+          {{ job["client_name"] }} 
+          <span style="font-size:12px;">📊</span>
+        </a>
+      {% else %}
+        {{ job["client_name"] }}
+      {% endif %}
+    </p>
+    <p>
+      <b>接案人：</b> 
+      {% if job['freelancer_id'] %}
+        <a href="/api/userProfile/{{ job['freelancer_id'] }}" style="color:#7a5e3e; text-decoration:none; font-weight:600;">
+          {{ job["freelancer_name"] }} 
+          <span style="font-size:12px;">📊</span>
+        </a>
+      {% else %}
+        <span>尚未選擇</span>
+      {% endif %}
+    </p>
+    
+    {% if job["requirement_file"] %}
+    <p><b>需求文件：</b>
+    <a href="/download_requirement/{{ job['id'] }}" target="_blank" style="color:#7a5e3e; font-weight:600; text-decoration:none;">
+      📄 下載 {{ job["requirement_file"].split('/')[-1] }}
+    </a>
+    </p>
+    {% endif %}
+
+    <hr>
+
+    {% set role = request.session.get("role") %}
+    {% set user_id = request.session.get("user_id") %}
+    {% set my_username = request.session.get("username") %}
+    
+    <p>
+      <a href="/">🏠 回首頁</a>　
+      {% if role == "甲方" %}
+        <a href="/dashboard_client">📂 回控制台</a>
+      {% elif role == "乙方" %}
+        <a href="/dashboard_freelancer">🛠️ 回控制台</a>
+      {% endif %}
+    </p>
+
+    {% if role == "乙方" and (job["status"] == "新工作" or job["status"] == "待確認") %}
+    {% if not is_expired %}
+    <h3>💰 我要報價</h3>
+    <form action="/bid" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="job_id" value="{{ job['id'] }}">
+      <label>請輸入你願意接案的價格：</label><br>
+      <input type="number" name="amount" min="{{ job['budget'] }}" required><br><br>
+      <label>提案計畫書（限 PDF 格式）：</label><br>
+      <input type="file" name="proposal_file" accept=".pdf" required><br><br>
+      <button type="submit">📤 送出報價</button>
+    </form>
+    {% else %}
+      <p style="color: red; font-weight: bold;">🚫 **競標已於 {{ job["deadline"] }} 截止，無法再報價。**</p>
+    {% endif %}
+
+    {% if bids %}
+    <h4>📊 目前已報價乙方：</h4>
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>名次</th>
+        <th>乙方名稱</th>
+        <th>報價金額</th>
+        <th>時間</th>
+      </tr>
+      {% for bid in bids %}
+      <tr {% if loop.first %} style="background:#e8ffe8;font-weight:bold;" {% endif %}>
+        <td>{{ loop.index }}</td>
+        <td>{{ bid["username"] }}</td>
+        <td>${{ bid["amount"] }}</td>
+        <td>{{ bid["created_at"] }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+    {% endif %}
+
+    {% if role == "甲方" and (job["status"] == "新工作" or job["status"] == "待確認") %}
+    <h3>📊 已報價乙方清單</h3>
+    {% if bids %}
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>名次</th>
+        <th>乙方名稱</th>
+        <th>報價金額</th>
+        <th>報價時間</th>
+        <th>提案文件</th>
+        <th>操作</th>
+      </tr>
+      {% for bid in bids %}
+      <tr {% if loop.first %} style="background:#e8ffe8;font-weight:bold;" {% endif %}>
+        <td>{{ loop.index }}</td>
+        <td>{{ bid["username"] }}</td>
+        <td>${{ bid["amount"] }}</td>
+        <td>{{ bid["created_at"] }}</td>
+        <td>
+        {% if bid["proposal_file"] %}
+          <a href="/download_proposal/{{ bid['bid_id'] }}" target="_blank">📄 下載提案</a>
+          {% else %}
+          -
+          {% endif %}
+        </td>
+        <td>
+          <form action="/chooseBid" method="post">
+            <input type="hidden" name="job_id" value="{{ job['id'] }}">
+            <input type="hidden" name="freelancer_id" value="{{ bid['bidder_id'] }}">
+            <button type="submit">✅ 選擇此乙方</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p>目前尚無乙方報價。</p>
+    {% endif %}
+    {% endif %}
+
+    {% if role == "乙方" and (job["status"] == "進行中" or job["status"] == "上傳成果") and job["freelancer_name"] == my_username %}
+    
+    {% if deliverables %}
+    <h3>🗂️ 成果版本歷史紀錄</h3>
+    <table style="margin-bottom: 20px;">
+      <tr>
+        <th>版本</th>
+        <th>上傳者</th>
+        <th>上傳時間</th>
+        <th>備註/狀態</th>
+        <th>檔案下載</th>
+      </tr>
+      {% for item in deliverables %}
+      <tr>
+        <td>v{{ loop.index }}</td> 
+        <td>{{ item["uploader_name"] }}</td>
+        <td>{{ item["uploaded_at"] }}</td>
+        <td>
+          {% if item["reject_reason"] %}
+            <span style="color: #ef4444; font-weight: bold;">❌ 被退件</span>
+            <p style="font-size: 13px; color:#ef4444; margin: 4px 0;">理由：{{ item["reject_reason"] }}</p>
+          {% else %}
+            <span style="color: green;">✔ 已上傳</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if loop.last %}
+            <a href="/download/{{ job['id'] }}" class="btn" style="padding:5px 10px; background:#c2a676; color:white; border-radius:4px;">📥 下載此版本</a>
+          {% else %}
+            <span style="color:#999;">(歷史版本)</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+    
+    {% if issues %}
+    <h3 style="border-left-color: #ef4444;">🐞 問題追蹤 (Issue Tracker)</h3>
+    {% for issue in issues %}
+    <div class="issue-box" style="{{ 'border-color:#10b981;' if issue['status']=='已解決' else 'border-color:#fca5a5;' }}">
+        <div class="issue-header">
+            <div>
+                <span class="status-tag {{ 'status-resolved' if issue['status']=='已解決' else 'status-open' }}">
+                    {{ issue['status'] }}
+                </span>
+                <strong style="font-size:18px; margin-left:8px;">{{ issue['title'] }}</strong>
+                <div style="font-size:13px; color:#888; margin-top:4px;">
+                    由 {{ issue['creator_name'] }} 建立於 {{ issue['created_at'] }}
+                </div>
+            </div>
+            </div>
+
+        <div class="comment-list">
+            {% for comment in issue["comments"] %}
+            <div class="comment-item">
+                <div class="comment-meta">
+                    <b>{{ comment["username"] }} ({{ comment["role"] }})</b> 
+                    <span> • {{ comment["created_at"] }}</span>
+                </div>
+                <div class="comment-content">{{ comment["content"] }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if issue['status'] == '未解決' %}
+        <form action="/api/addComment" method="post" style="margin-top:15px; display:flex; gap:10px;">
+            <input type="hidden" name="job_id" value="{{ job['id'] }}">
+            <input type="hidden" name="issue_id" value="{{ issue['id'] }}">
+            <input type="text" name="content" placeholder="針對此問題回覆..." required style="margin-top:0; flex-grow:1;">
+            <button type="submit" style="margin-top:0; padding:8px 15px;">💬 回覆</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <hr>
+    {% endif %}
+    
+    <h3>📦 上傳/更新成果</h3>
+    <form action="/api/upload" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="job_id" value="{{ job['id'] }}">
+      <input type="file" name="uploadedFile" required>
+      <button type="submit">🚀 上傳成果</button>
+    </form>
+    {% endif %}
+    {% if role == "甲方" and job["status"] in ["上傳成果", "進行中" ,"已完成"] %}
+
+        {% if deliverables %}
+        <h3>🗂️ 成果版本歷史紀錄</h3>
+        <table style="margin-bottom: 20px;">
+          <tr>
+            <th>版本</th>
+            <th>上傳者</th>
+            <th>上傳時間</th>
+            <th>備註/狀態</th>
+            <th>檔案下載</th>
+          </tr>
+          {% for item in deliverables %}
+          <tr>
+            <td>v{{ loop.index }}</td> 
+            <td>{{ item["uploader_name"] }}</td>
+            <td>{{ item["uploaded_at"] }}</td>
+            <td>
+              {% if item["reject_reason"] %}
+                <span style="color: #ef4444; font-weight: bold;">❌ 被退件</span>
+                <p style="font-size: 13px; color:#ef4444; margin: 4px 0;">理由：{{ item["reject_reason"] }}</p>
+              {% else %}
+                <span style="color: green;">✔ 已上傳</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if loop.last %}
+                <a href="/download/{{ job['id'] }}" class="btn" style="padding:5px 10px; background:#c2a676; color:white; border-radius:4px;">📥 下載最新版本</a>
+              {% else %}
+                <span style="color:#999;">(歷史版本)</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+        {% endif %}
+
+        <h3 style="border-left-color: #ef4444;">🐞 問題追蹤 (Issue Tracker)</h3>
+        
+        {% if issues %}
+            {% for issue in issues %}
+            <div class="issue-box" style="{{ 'border-color:#10b981;' if issue['status']=='已解決' else 'border-color:#fca5a5;' }}">
+                <div class="issue-header">
+                    <div>
+                        <span class="status-tag {{ 'status-resolved' if issue['status']=='已解決' else 'status-open' }}">
+                            {{ issue['status'] }}
+                        </span>
+                        <strong style="font-size:18px; margin-left:8px;">{{ issue['title'] }}</strong>
+                        <div style="font-size:13px; color:#888; margin-top:4px;">
+                            由 {{ issue['creator_name'] }} 建立於 {{ issue['created_at'] }}
+                        </div>
+                    </div>
+                    
+                    {% if role == "甲方" and issue['status'] == '未解決' %}
+                    <form action="/api/resolveIssue" method="post">
+                        <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                        <input type="hidden" name="issue_id" value="{{ issue['id'] }}">
+                        <button type="submit" class="success-btn">✨ 標記為已解決</button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                <div class="comment-list">
+                    {% for comment in issue["comments"] %}
+                    <div class="comment-item">
+                        <div class="comment-meta">
+                            <b>{{ comment["username"] }} ({{ comment["role"] }})</b> 
+                            <span> • {{ comment["created_at"] }}</span>
+                        </div>
+                        <div class="comment-content">{{ comment["content"] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if issue['status'] == '未解決' and (role == "甲方" or (role == "乙方" and job["freelancer_name"] == my_username)) %}
+                <form action="/api/addComment" method="post" style="margin-top:15px; display:flex; gap:10px;">
+                    <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                    <input type="hidden" name="issue_id" value="{{ issue['id'] }}">
+                    <input type="text" name="content" placeholder="輸入回覆..." required style="margin-top:0; flex-grow:1;">
+                    <button type="submit" style="margin-top:0; padding:8px 15px;">💬 回覆</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color:#666;">目前沒有任何待解決事項。</p>
+        {% endif %}
+
+        {% if role == "甲方" and job["status"] != "已完成" %}
+        <div style="display: flex; gap: 20px; margin-top: 20px;">
+            
+            <div style="background-color:#fff3cd; padding:15px; border-radius:10px; flex: 1;">
+                <h4 style="margin-top:0; color:#856404;">📝 建立新的待解決事項 (Issue)</h4>
+                <form action="/api/addIssue" method="post">
+                    <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                    <input type="text" name="title" placeholder="請簡述問題 (例如：Logo 顏色需調整...)" required>
+                    <button type="submit" style="background-color:#e0a800; width: 100%; margin-top: 15px;">➕ 建立 Issue</button>
+                </form>
+            </div>
+
+            {% if job["status"] == "上傳成果" %}
+            <div style="background-color:#fef2f2; padding:15px; border-radius:10px; flex: 1;">
+                <h4 style="margin-top:0; color:#ef4444;">❌ 成果退件</h4>
+                <form action="/rejectJob" method="post">
+                    <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                    <textarea name="reason" rows="3" placeholder="請輸入詳細退件理由 (必填)" required style="width:100%; margin-bottom:10px; border: 1px solid #ef4444; padding: 10px; border-radius: 5px;"></textarea>
+                    <button type="submit" class="danger-btn" style="width:100%; margin-top:0; background-color: #ef4444; color: white; padding: 10px; border-radius: 5px; border: none; cursor: pointer;">❌ 確認退件並要求重新上傳</button>
+                </form>
+            </div>
+            {% endif %}
+            
+        </div>
+        {% endif %}
+
+        {% if job["status"] == "上傳成果" %}
+        <hr>
+        <div style="text-align:center; margin-top:30px;">
+            <h3>🏁 專案結案</h3>
+            <p>請確認所有 Issue 皆已標記為「已解決」後，才可點擊結案。</p>
+            <form action="/completeJob" method="post">
+                <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                <button type="submit" class="success-btn" style="padding:15px 30px; font-size:18px;">🎉 確認專案驗收完成 (結案)</button>
+            </form>
+        </div>
+        {% endif %}
+
+    {% endif %}
+
+    {% if role == "甲方" and job["client_name"] == username %}
+      <p style="text-align:center; margin-top:20px;"><a href="/editJobForm/{{ job['id'] }}" style="color:#a88752;">✏️ 編輯此案件</a></p>
+    {% endif %}
+
+    {% if role == "乙方" and job["status"] == "進行中" and deliverable and deliverable["reject_reason"] %}
+    <hr>
+    <p style="color:red;"><b>❗ 退件理由：</b> {{ deliverable["reject_reason"] }}</p>
+    {% endif %}
+
+    {% if job["status"] == "已完成" %}
+    <hr>
+    <div style="text-align:center; color:green; padding:20px; background:#e6fffa; border-radius:10px;">
+        <h2>✅ 案件已圓滿結案！</h2>
+        <p>感謝雙方的合作。</p>
+    </div>
+    
+    <!-- ✅ 新增：評價區域 -->
+    {% if rating_deadline %}
+      <!-- 評價期限未過 -->
+      <h3>⭐ 評價區間</h3>
+      
+      {% set role = request.session.get("role") %}
+      {% set user_id = request.session.get("user_id") %}
+      
+      {% if rating_deadline["rating_deadline"] %}
+        <p>評價期限：<strong>{{ rating_deadline["rating_deadline"].strftime("%Y-%m-%d %H:%M") }}</strong></p>
+        
+        <!-- 條件1：甲方評價乙方 -->
+        {% if role == "甲方" %}
+          {% if job['freelancer_id'] %}
+            {% if not rating_deadline["client_rated"] %}
+              <!-- 甲方未評價乙方 -->
+              <p>
+                <a href="/api/ratingForm/{{ job['id'] }}/{{ job['freelancer_id'] }}" 
+                   style="background-color:#c2a676; color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:600;">
+                  💬 評價乙方 ({{ job['freelancer_name'] }})
+                </a>
+              </p>
+            {% else %}
+              <p style="color:#999;">✓ 您已評價此乙方</p>
+            {% endif %}
+          {% else %}
+            <p style="color:#999;">ℹ️ 尚未分配接案人，無法評價</p>
+          {% endif %}
+        
+        <!-- 條件2：乙方評價甲方 -->
+        {% elif role == "乙方" %}
+          {% if job["freelancer_name"] == request.session.get("username") %}
+            {% if job['client_id'] %}
+              {% if not rating_deadline["freelancer_rated"] %}
+                <!-- 乙方未評價甲方 -->
+                <p>
+                  <a href="/api/ratingForm/{{ job['id'] }}/{{ job['client_id'] }}" 
+                     style="background-color:#c2a676; color:white; padding:10px 20px; border-radius:6px; text-decoration:none; font-weight:600;">
+                    💬 評價甲方 ({{ job['client_name'] }})
+                  </a>
+                </p>
+              {% else %}
+                <p style="color:#999;">✓ 您已評價此甲方</p>
+              {% endif %}
+            {% else %}
+              <p style="color:#999;">ℹ️ 無法找到甲方信息</p>
+            {% endif %}
+          {% else %}
+            <p style="color:#999;">ℹ️ 您不是此案件的接案人</p>
+          {% endif %}
+        
+        <!-- 其他角色 -->
+        {% else %}
+          <p style="color:#999;">ℹ️ 無評價權限</p>
+        {% endif %}
+      {% else %}
+        <!-- 評價期限已過 -->
+        <p style="color:#999;">ℹ️ 評價期限已過</p>
+      {% endif %}
+    {% else %}
+      <!-- 無評價期限信息 -->
+      <p style="color:#999;">ℹ️ 案件尚未完成，無法評價</p>
+    {% endif %}
+    
+    <!-- ✅ 新增：顯示此案件的所有評價 -->
+    {% if job_ratings and job_ratings|length > 0 %}
+    <h3>📊 案件評價記錄</h3>
+    <table style="width:100%; border-collapse:collapse; margin-top:15px;">
+      <tr style="background-color:#e9dfd0; font-weight:700;">
+        <th style="padding:12px; text-align:left; border:1px solid #d4c7b5;">評價者</th>
+		{% if ratee_role == "甲方" %}
+          <th style="padding:12px; text-align:center; border:1px solid #d4c7b5;">需求合理性</th>
+          <th style="padding:12px; text-align:center; border:1px solid #d4c7b5;">驗收難度</th>
+          <th style="padding:12px; text-align:center; border:1px solid #d4c7b5;">合作態度</th>
+		{% else %}
+		  <th style="padding:12px; text-align:center; border:1px solid #d4c7b5;">產出品質</th>
+          <th style="padding:12px; text-align:center; border:1px solid #d4c7b5;">執行效率</th>
+          <th style="padding:12px; text-align:center; border:1px solid #d4c7b5;">合作態度</th>
+		{% endif %}
+        <th style="padding:12px; text-align:left; border:1px solid #d4c7b5;">評論</th>
+      </tr>
+      {% for rating in job_ratings %}
+      <tr style="border:1px solid #e2d5c4;">
+        <td style="padding:12px; border:1px solid #e2d5c4;">{{ rating["rater_name"] }} ({{ rating["rater_role"] }})</td>
+        <td style="padding:12px; text-align:center; border:1px solid #e2d5c4;">
+          {% for i in range(rating["dimension1_score"]) %}★{% endfor %}
+        </td>
+        <td style="padding:12px; text-align:center; border:1px solid #e2d5c4;">
+          {% for i in range(rating["dimension2_score"]) %}★{% endfor %}
+        </td>
+        <td style="padding:12px; text-align:center; border:1px solid #e2d5c4;">
+          {% for i in range(rating["dimension3_score"]) %}★{% endfor %}
+        </td>
+        <td style="padding:12px; border:1px solid #e2d5c4;">{{ rating["comment"] or "-" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+    {% endif %}
+  </main>
+
+  <footer>© 2025 工作委託平台 | 案件詳情頁</footer>
+</body>
+</html>
