@@ -1,13 +1,14 @@
+# db.py
+import os
+from dotenv import load_dotenv
 from psycopg_pool import AsyncConnectionPool
 from psycopg.rows import dict_row
 
-defaultDB = "1141se"
-dbUser = "postgres"
-dbPassword = "boy20050525"
-dbHost = "localhost"
-dbPort = 5432
+# 1. 載入 .env 檔案
+load_dotenv()
 
-DATABASE_URL = f"dbname={defaultDB} user={dbUser} password={dbPassword} host={dbHost} port={dbPort}"
+# 2. 組合連線字串 (使用 .env 裡的變數)
+DATABASE_URL = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_USER')} password={os.getenv('DB_PASSWORD')} host={os.getenv('DB_HOST')} port={os.getenv('DB_PORT')}"
 
 _pool: AsyncConnectionPool | None = None
 

@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Form, Request, BackgroundTasks
+from fastapi import APIRouter, Form, Request, BackgroundTasks, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import psycopg
@@ -8,14 +8,19 @@ import secrets, datetime
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import os
+from db import getDB
+from dotenv import load_dotenv # 匯入讀取套件
+
+load_dotenv()  # 讀取 .env 檔案
 
 # === Router 模組化設定 ===
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# 👇 新增：Gmail 設定 (請填入您的真實資訊)
-SMTP_EMAIL = "pangolin525@gmail.com"
-SMTP_PASSWORD = "orie enyd qrkc sldw" 
+# 讀取變數 (如果讀不到會回傳 None)
+SMTP_EMAIL = os.getenv("MAIL_USERNAME")
+SMTP_PASSWORD = os.getenv("MAIL_PASSWORD")
 
 # 👇 新增：寄信函式
 def send_reset_email_task(to_email: str, reset_link: str):
@@ -42,14 +47,6 @@ def send_reset_email_task(to_email: str, reset_link: str):
     except Exception as e:
         print(f"❌ 寄信失敗: {e}")
 
-# === 資料庫連線 ===
-async def getDB():
-    conn = await psycopg.AsyncConnection.connect(
-        "dbname=1141se user=postgres password=boy20050525 host=localhost port=5432",
-        row_factory=dict_row
-    )
-    return conn
-
 
 # === 登入頁 ===
 @router.get("/loginForm", response_class=HTMLResponse)
@@ -62,9 +59,9 @@ async def login_form(request: Request):
 async def login(
     request: Request,
     username: str = Form(...),
-    password: str = Form(...)
+    password: str = Form(...),
+    conn=Depends(getDB)
 ):
-    conn = await getDB()
     async with conn.cursor() as cur:
         await cur.execute(
             "SELECT * FROM users WHERE username=%s AND password=%s;",
@@ -103,8 +100,8 @@ async def register_user(
     username: str = Form(...),
     password: str = Form(...),
     role: str = Form(...),
+    conn=Depends(getDB)
 ):
-    conn = await getDB()
     async with conn.cursor() as cur:
         try:
             await cur.execute(
@@ -129,9 +126,9 @@ async def forgot_password_page(request: Request):
 async def send_reset_code( # 改名一下比較清楚
     request: Request, 
     background_tasks: BackgroundTasks,
-    email: str = Form(...)
+    email: str = Form(...),
+    conn=Depends(getDB)
 ):
-    conn = await getDB()
     async with conn.cursor() as cur:
         await cur.execute("SELECT id FROM users WHERE email=%s;", (email,))
         user = await cur.fetchone()
@@ -197,12 +194,12 @@ async def do_reset_with_code(
     request: Request,
     code: str = Form(...), # 使用者輸入的 6 位數
     password: str = Form(...),
-    confirm_password: str = Form(...)
+    confirm_password: str = Form(...),
+    conn=Depends(getDB)
 ):
     if password != confirm_password:
         return HTMLResponse("密碼不一致 <a href='javascript:history.back()'>返回</a>", status_code=400)
 
-    conn = await getDB()
     async with conn.cursor() as cur:
         # 1. 找看看有沒有這個驗證碼 (且未過期)
         await cur.execute(
