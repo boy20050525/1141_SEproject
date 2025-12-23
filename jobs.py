@@ -8,8 +8,67 @@
 # - 對應資料表：jobs, users, quotations, deliverables
 # =============================
 
+import secrets
 from psycopg_pool import AsyncConnectionPool
 from datetime import datetime, timedelta
+
+# ---------------------------------
+# 重設密碼功能
+# ---------------------------------
+# 1️⃣ 透過 Email 找使用者 (維持不變)
+async def getUserByEmail(conn, email):
+    async with conn.cursor() as cur:
+        # 根據您的 users 資料表
+        await cur.execute("SELECT id, username FROM users WHERE email = %s;", (email,))
+        return await cur.fetchone()
+
+# 2️⃣ 儲存重設 Token (修改：存入 password_reset_tokens 表)
+async def saveResetToken(conn, user_id):
+    token = secrets.token_urlsafe(32) # 產生安全亂碼
+    expires = datetime.now() + timedelta(minutes=15)
+    
+    async with conn.cursor() as cur:
+        # ⚠️ 修改：使用 INSERT 寫入獨立資料表
+        sql = """
+        INSERT INTO password_reset_tokens (user_id, token, expires_at)
+        VALUES (%s, %s, %s);
+        """
+        await cur.execute(sql, (user_id, token, expires))
+        await conn.commit()
+    return token
+
+# 3️⃣ 驗證 Token 是否有效 (修改：查詢 password_reset_tokens 表)
+async def verifyToken(conn, token):
+    async with conn.cursor() as cur:
+        # 查詢 token 是否存在且尚未過期
+        sql = """
+        SELECT user_id FROM password_reset_tokens 
+        WHERE token = %s AND expires_at > CURRENT_TIMESTAMP;
+        """
+        await cur.execute(sql, (token,))
+        row = await cur.fetchone()
+        
+        if row:
+            # 如果 Token 有效，順便抓取使用者資料回傳 (方便後續處理)
+            user_id = row["user_id"]
+            await cur.execute("SELECT id, username FROM users WHERE id = %s;", (user_id,))
+            return await cur.fetchone()
+        return None
+
+# 4️⃣ 重設密碼並清除 Token (修改：刪除 password_reset_tokens 紀錄)
+async def resetPassword(conn, user_id, new_password):
+    async with conn.cursor() as cur:
+        # 1. 更新使用者密碼
+        sql_update = "UPDATE users SET password = %s WHERE id = %s;"
+        await cur.execute(sql_update, (new_password, user_id))
+        
+        # 2. 刪除該使用者所有的重設 Token (避免舊連結被重複使用)
+        sql_delete = "DELETE FROM password_reset_tokens WHERE user_id = %s;"
+        await cur.execute(sql_delete, (user_id,))
+        
+        await conn.commit()
+    return True
+
 # ---------------------------------
 # 1️⃣ 取得全部工作清單 (首頁)
 # ---------------------------------

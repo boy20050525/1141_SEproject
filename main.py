@@ -12,11 +12,15 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from sessionLogin import router as login_router
 
-from fastapi import File, UploadFile
+from fastapi import File, UploadFile, BackgroundTasks
 
 from datetime import datetime
 
+import smtplib
 
+from email.mime.text import MIMEText
+
+from email.mime.multipart import MIMEMultipart
 
 import os
 
@@ -89,9 +93,6 @@ app.include_router(rating_router, prefix="/api")
 # =============================
 
 app.mount("/static", StaticFiles(directory="www"), name="static")
-
-
-
 
 
 # =============================

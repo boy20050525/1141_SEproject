@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>輸入驗證碼</title>
+  <style>
+      /* ... (略，可直接複製 forgot.html 的 style) ... */
+      body { background: #f6f2ec; font-family: sans-serif; display:flex; justify-content:center; align-items:center; height:100vh;}
+      .form-box { background:white; padding:40px; border-radius:10px; text-align:center; box-shadow:0 5px 15px rgba(0,0,0,0.1); }
+      input { display:block; width:100%; margin:10px 0; padding:10px; }
+      button { background:#c2a676; color:white; padding:10px; width:100%; border:none; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="form-box">
+    <h2>🔒 驗證身分</h2>
+    <p>驗證碼已寄送至您的信箱，請輸入以重設密碼。</p>
+    
+    <form action="/do_reset_with_code" method="post">
+      <input type="text" name="code" placeholder="請輸入 6 位數驗證碼" required>
+      <input type="password" name="password" placeholder="新密碼" required>
+      <input type="password" name="confirm_password" placeholder="確認新密碼" required>
+      <button type="submit">確認修改</button>
+    </form>
+  </div>
+</body>
+</html>
