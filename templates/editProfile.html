@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>編輯個人檔案</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Noto Sans TC', sans-serif; }
+    body { margin: 0; background-color: #f7f3ef; color: #3b2f2f; padding: 40px 20px; }
+    
+    .container {
+      max-width: 800px; /* 加寬一點以容納標籤 */
+      margin: 0 auto;
+      background-color: #fffdfa;
+      border-radius: 15px;
+      padding: 40px;
+      box-shadow: 0 6px 20px rgba(59, 47, 47, 0.08);
+      border: 1px solid #e2d5c4;
+    }
+
+    h2 { color: #3e2e1e; border-bottom: 2px solid #e9dfd0; padding-bottom: 15px; margin-top: 0; }
+    
+    .avatar-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    
+    .avatar-preview {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid #e9dfd0;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+      background-color: #eee;
+    }
+
+    .form-group { margin-bottom: 25px; }
+    label { display: block; font-weight: 600; color: #5a4632; margin-bottom: 8px; }
+    
+    input[type="text"], textarea {
+      width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #d4c7b5;
+      background-color: #fffaf3; font-size: 15px;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    
+    /* --- 技能標籤多選樣式 (與 Register 同步) --- */
+    .skills-wrapper {
+        border: 1px solid #e2d5c4;
+        padding: 20px;
+        border-radius: 8px;
+        background: #fffaf3;
+    }
+    .skill-category { margin-bottom: 15px; }
+    .category-title {
+        font-size: 13px; color: #a88752; font-weight: bold; margin-bottom: 10px; display: block;
+    }
+    .tags-container { display: flex; flex-wrap: wrap; gap: 8px; }
+    .skill-checkbox { display: none; }
+    
+    .skill-tag {
+        font-size: 14px; padding: 6px 14px; border: 1px solid #d4c7b5; border-radius: 20px;
+        color: #5a4632; cursor: pointer; background-color: white; transition: all 0.2s; user-select: none;
+    }
+    .skill-tag:hover { border-color: #a88752; background-color: #fcf9f5; }
+    
+    /* 選中狀態 - 深色高亮 */
+    .skill-checkbox:checked + .skill-tag {
+        background-color: #5a4632; color: #fff; border-color: #5a4632;
+    }
+
+    #other-skill-input { margin-top: 10px; display: none; }
+
+    .btn-group { display: flex; gap: 15px; margin-top: 30px; justify-content: flex-end; }
+    
+    button { padding: 12px 25px; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; font-size: 15px; }
+    .btn-save { background-color: #c2a676; color: white; transition: background 0.3s; }
+    .btn-save:hover { background-color: #a88752; }
+    
+    .btn-cancel { background-color: #e0d5c5; color: #5a4632; text-decoration: none; display: inline-block; text-align: center; padding: 12px 25px; border-radius: 6px; transition: background 0.3s; }
+    .btn-cancel:hover { background-color: #d4c7b5; }
+
+    input[type="file"] { display: none; }
+    .upload-btn { cursor: pointer; color: #7a5e3e; text-decoration: underline; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>✏️ 編輯個人檔案</h2>
+    
+    <form action="/editProfile" method="post" enctype="multipart/form-data" id="editForm">
+      
+      <div class="avatar-section">
+        {% if user.avatar %}
+          <img src="/static/uploads/avatars/{{ user.avatar }}" class="avatar-preview" id="previewImg">
+        {% else %}
+          <div class="avatar-preview" style="display:flex;align-items:center;justify-content:center;font-size:40px;color:#ccc;">👤</div>
+        {% endif %}
+        
+        <label for="avatarUpload" class="upload-btn">📷 更換大頭貼</label>
+        <input type="file" name="avatar_file" id="avatarUpload" accept="image/*" onchange="previewFile()">
+      </div>
+
+      <div class="form-group">
+        <label>使用者名稱</label>
+        <input type="text" name="username" value="{{ user.username }}" required>
+      </div>
+
+      <div class="form-group">
+        <label>聯絡電話</label>
+        <input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="未設定">
+      </div>
+
+      <div class="form-group">
+        <label>技能 / 專長標籤</label>
+        <input type="hidden" id="db-skills" value="{{ user.skills or '' }}">
+        <input type="hidden" name="skills" id="final-skills">
+        
+        <div class="skills-wrapper">
+            <div class="skill-category">
+                <span class="category-title">💻 程式開發</span>
+                <div class="tags-container">
+                    <label><input type="checkbox" class="skill-checkbox" value="Python"><span class="skill-tag">Python</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="Web前端"><span class="skill-tag">Web 前端</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="Web後端"><span class="skill-tag">Web 後端</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="App開發"><span class="skill-tag">App 開發</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="資料分析"><span class="skill-tag">資料分析</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="AI/機器學習"><span class="skill-tag">AI/機器學習</span></label>
+                </div>
+            </div>
+
+            <div class="skill-category">
+                <span class="category-title">🎨 設計與多媒體</span>
+                <div class="tags-container">
+                    <label><input type="checkbox" class="skill-checkbox" value="平面設計"><span class="skill-tag">平面設計</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="UI/UX設計"><span class="skill-tag">UI/UX 設計</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="Logo設計"><span class="skill-tag">Logo/VI</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="插畫繪圖"><span class="skill-tag">插畫繪圖</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="影片剪輯"><span class="skill-tag">影片剪輯</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="3D建模"><span class="skill-tag">3D 建模</span></label>
+                </div>
+            </div>
+
+            <div class="skill-category">
+                <span class="category-title">📊 行銷與商業</span>
+                <div class="tags-container">
+                    <label><input type="checkbox" class="skill-checkbox" value="社群行銷"><span class="skill-tag">社群行銷</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="SEO優化"><span class="skill-tag">SEO 優化</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="文案寫作"><span class="skill-tag">文案寫作</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="翻譯"><span class="skill-tag">翻譯</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="行政支援"><span class="skill-tag">行政支援</span></label>
+                </div>
+            </div>
+
+            <div class="skill-category" style="margin-bottom:0;">
+                <div class="tags-container">
+                    <label>
+                        <input type="checkbox" class="skill-checkbox" id="check-other">
+                        <span class="skill-tag" style="border-style: dashed;">➕ 其他</span>
+                    </label>
+                </div>
+                <input type="text" id="other-skill-input" placeholder="請輸入其他技能 (例如: 攝影, 配音...)">
+            </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>自我介紹 / 公司簡介</label>
+        <textarea name="bio" placeholder="介紹一下您自己...">{{ user.bio or '' }}</textarea>
+      </div>
+
+      <div class="btn-group">
+        <a href="/" class="btn-cancel">取消</a>
+        <button type="submit" class="btn-save">💾 儲存變更</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // 1. 圖片預覽功能
+    function previewFile() {
+      const preview = document.getElementById('previewImg') || document.querySelector('.avatar-preview');
+      const file = document.querySelector('input[type=file]').files[0];
+      const reader = new FileReader();
+
+      reader.addEventListener("load", function () {
+        if(preview.tagName !== 'IMG') {
+            const newImg = document.createElement('img');
+            newImg.className = 'avatar-preview';
+            newImg.id = 'previewImg';
+            newImg.src = reader.result;
+            preview.parentNode.replaceChild(newImg, preview);
+        } else {
+            preview.src = reader.result;
+        }
+      }, false);
+
+      if (file) { reader.readAsDataURL(file); }
+    }
+
+    // 2. 頁面載入時：自動勾選已有的技能
+    document.addEventListener("DOMContentLoaded", function() {
+        const dbSkillsStr = document.getElementById('db-skills').value;
+        if (dbSkillsStr) {
+            // 假設資料庫存的是 "Python, 平面設計, 攝影"
+            const skills = dbSkillsStr.split(',').map(s => s.trim());
+            const otherSkills = [];
+
+            skills.forEach(skill => {
+                // 嘗試找看看有沒有對應值的 checkbox
+                const checkbox = document.querySelector(`.skill-checkbox[value="${skill}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                } else if (skill) {
+                    // 找不到對應的，代表是「其他」類型的自訂技能
+                    otherSkills.push(skill);
+                }
+            });
+
+            // 如果有自訂技能，填入「其他」輸入框並打勾
+            if (otherSkills.length > 0) {
+                document.getElementById('check-other').checked = true;
+                const otherInput = document.getElementById('other-skill-input');
+                otherInput.style.display = 'block';
+                otherInput.value = otherSkills.join(', ');
+            }
+        }
+    });
+
+    // 3. 監聽「其他」Checkbox 切換
+    document.getElementById('check-other').addEventListener('change', function() {
+        const input = document.getElementById('other-skill-input');
+        if (this.checked) {
+            input.style.display = 'block';
+        } else {
+            input.style.display = 'none';
+        }
+    });
+
+    // 4. 表單提交時：組合所有標籤
+    document.getElementById('editForm').addEventListener('submit', function(e) {
+        const checkedBoxes = document.querySelectorAll('.skill-checkbox:checked:not(#check-other)');
+        let skillsArray = [];
+        
+        checkedBoxes.forEach(box => {
+            skillsArray.push(box.value);
+        });
+
+        const otherCheck = document.getElementById('check-other');
+        const otherInput = document.getElementById('other-skill-input');
+        
+        if (otherCheck.checked && otherInput.value.trim() !== "") {
+            skillsArray.push(otherInput.value.trim());
+        }
+
+        document.getElementById('final-skills').value = skillsArray.join(', ');
+    });
+  </script>
+</body>
+</html>

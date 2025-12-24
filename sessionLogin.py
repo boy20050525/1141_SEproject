@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Form, Request, BackgroundTasks, Depends
+from fastapi import APIRouter, Form, Request, BackgroundTasks, Depends, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import psycopg
@@ -10,6 +10,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
 from db import getDB
+import shutil
+import time
 from dotenv import load_dotenv # 匯入讀取套件
 
 load_dotenv()  # 讀取 .env 檔案
@@ -93,27 +95,61 @@ async def register_page(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
 
-# === 接收註冊表單 ===
+# === 接收註冊表單 (修正版) ===
 @router.post("/register")
 async def register_user(
     request: Request,
     username: str = Form(...),
     password: str = Form(...),
+    email: str = Form(...),    # ✅ 新增接收 Email (必填)
     role: str = Form(...),
+    phone: str = Form(None),   # ✅ 新增接收 (選填)
+    skills: str = Form(None),  # ✅ 新增接收 (選填)
+    bio: str = Form(None),     # ✅ 新增接收 (選填)
+    avatar_file: UploadFile = File(None), # ✅ 新增接收頭像
     conn=Depends(getDB)
 ):
+    # 1. 處理頭像上傳 (如果有)
+    avatar_filename = None
+    if avatar_file and avatar_file.filename:
+        upload_dir = "www/uploads/avatars"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 產生唯一檔名
+        file_ext = avatar_file.filename.split(".")[-1]
+        safe_filename = f"user_{int(time.time())}_{secrets.token_hex(4)}.{file_ext}"
+        file_path = os.path.join(upload_dir, safe_filename)
+        
+        try:
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(avatar_file.file, buffer)
+            avatar_filename = safe_filename
+        except Exception as e:
+            print(f"❌ 頭像上傳失敗: {e}")
+
+    # 2. 寫入資料庫
     async with conn.cursor() as cur:
         try:
+            # 檢查 Email 是否已被註冊
+            await cur.execute("SELECT id FROM users WHERE email = %s;", (email,))
+            if await cur.fetchone():
+                return HTMLResponse("⚠️ Email 已被註冊 <a href='javascript:history.back()'>返回</a>", status_code=400)
+
+            # 寫入所有欄位
+            sql = """
+                INSERT INTO users 
+                (username, password, email, role, phone, skills, bio, avatar, created_at) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);
+            """
             await cur.execute(
-                "INSERT INTO users (username, password, role) VALUES (%s, %s, %s);",
-                (username, password, role)
+                sql, 
+                (username, password, email, role, phone, skills, bio, avatar_filename)
             )
             await conn.commit()
         except Exception as e:
             return HTMLResponse(f"⚠️ 註冊失敗：{e}<br><a href='/register'>返回重試</a>", status_code=400)
 
     return HTMLResponse("✅ 註冊成功！<a href='/loginForm'>返回登入</a>", status_code=200)
-
 
 # === 忘記密碼頁 ===
 @router.get("/forgot", response_class=HTMLResponse)
