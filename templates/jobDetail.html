@@ -186,6 +186,97 @@
       font-size: 14px;
       color: #7a6b5b;
     }
+
+    /* --- 倒數計時器專用樣式 (大地色系版) --- */
+    .countdown-wrapper {
+        /* 背景：改為深棕色漸層，呼應您的文字與 hover 顏色 */
+        background: linear-gradient(135deg, #98724c, #9c6d4d); 
+        border-radius: 15px;
+        padding: 25px;
+        margin: 25px 0;
+        color: #fffdfa; /* 使用 main 的背景色作為文字基底，視覺柔和 */
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(59, 47, 47, 0.3); /* 陰影改為深褐色 */
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #c2a676; /* 加入金棕色邊框，呼應按鈕 */
+    }
+    
+    /* 標題：使用 Header 的米色，與深棕色背景形成優雅對比 */
+    .countdown-title {
+        font-size: 1.2em;
+        margin-bottom: 20px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #e9dfd0; 
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .countdown-flex {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+    }
+
+    .time-unit {
+        /* 半透明背景，讓深棕色透出來，增加層次感 */
+        background: rgba(255, 255, 255, 0.1); 
+        backdrop-filter: blur(5px);
+        /* 邊框使用您的金棕色，並帶一點透明度 */
+        border: 1px solid rgba(194, 166, 118, 0.4); 
+        padding: 15px 10px;
+        border-radius: 10px;
+        min-width: 80px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: transform 0.2s ease, border-color 0.2s;
+    }
+
+    /* 滑鼠移過去時的小特效 */
+    .time-unit:hover {
+        transform: translateY(-3px);
+        border-color: #c2a676; /* 變回實心金色 */
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .time-value {
+        font-size: 2.5em;
+        font-weight: 700;
+        line-height: 1;
+        font-family: 'Courier New', Courier, monospace;
+        color: #ffffff; /* 純白數字最清晰 */
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .time-label {
+        font-size: 0.9em;
+        margin-top: 8px;
+        color: #d4c7b5; /* 使用邊框色作為標籤顏色 */
+        font-weight: 600;
+    }
+
+    /* 過期狀態樣式 - 保持紅色警示 (與 danger-btn 一致) */
+    .expired-status {
+        background: #ef4444; 
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        font-weight: bold;
+        text-align: center;
+        margin: 20px 0;
+        display: none; 
+        box-shadow: 0 5px 15px rgba(239, 68, 68, 0.366);
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.85; }
+        100% { opacity: 1; }
+    }
+
   </style>
 </head>
 
@@ -198,9 +289,7 @@
     <p><b>內容：</b> {{ job["content"] }}</p>
     <p><b>狀態：</b> <span style="color: #c2a676; font-weight: bold;">{{ job["status"] }}</span></p>
     <p><b>預算：</b> ${{ job["budget"] }}</p>
-    {% if job["deadline"] %}
-    <p><b>競標截止：</b> {{ job["deadline"] }}</p>
-    {% endif %}
+
     <p><b>委託人：</b> {% if job['client_id'] %}
         <a href="/api/userProfile/{{ job['client_id'] }}" style="color:#7a5e3e; text-decoration:none; font-weight:600;">
           {{ job["client_name"] }} 
@@ -228,6 +317,91 @@
       📄 下載 {{ job["requirement_file"].split('/')[-1] }}
     </a>
     </p>
+    {% endif %}
+
+        {% if job["deadline"] %}
+        <input type="hidden" id="deadlineTimestamp" value="{{ job['deadline'] }}">
+
+        <div id="countdownPanel" class="countdown-wrapper" style="display: none;">
+            <div class="countdown-title">距離競標截止剩餘</div>
+            <div class="countdown-flex">
+                <div class="time-unit">
+                    <span class="time-value" id="cd_days">00</span>
+                    <span class="time-label">天</span>
+                </div>
+                <div class="time-unit">
+                    <span class="time-value" id="cd_hours">00</span>
+                    <span class="time-label">時</span>
+                </div>
+                <div class="time-unit">
+                    <span class="time-value" id="cd_min">00</span>
+                    <span class="time-label">分</span>
+                </div>
+                <div class="time-unit">
+                    <span class="time-value" id="cd_sec">00</span>
+                    <span class="time-label">秒</span>
+                </div>
+            </div>
+            <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                ( 截止時間：{{ job["deadline"] }} )
+            </p>
+        </div>
+
+        <div id="expiredPanel" class="expired-status">
+            🚫 此案件競標已截止
+        </div>
+
+        <script>
+            (function() {
+                var deadlineStr = document.getElementById("deadlineTimestamp").value;
+                // 將日期字串中的空格換成 T 以符合 ISO 格式 (YYYY-MM-DDTHH:MM:SS)
+                var deadlineDate = new Date(deadlineStr.replace(" ", "T")); 
+                
+                var countdownPanel = document.getElementById("countdownPanel");
+                var expiredPanel = document.getElementById("expiredPanel");
+
+                function updateTimer() {
+                    var now = new Date().getTime();
+                    var distance = deadlineDate.getTime() - now;
+
+                    if (distance < 0) {
+                        // 時間到：顯示過期面板
+                        if(countdownPanel) countdownPanel.style.display = "none";
+                        if(expiredPanel) expiredPanel.style.display = "block";
+                        
+                        // 自動禁用報價按鈕
+                        var bidBtn = document.querySelector("button[type='submit']");
+                        // 確保只禁用 "送出報價" 按鈕，避免誤傷其他按鈕
+                        if (bidBtn && bidBtn.innerText.indexOf("報價") !== -1) {
+                            bidBtn.disabled = true;
+                            bidBtn.innerText = "已截止";
+                            bidBtn.style.backgroundColor = "#ccc";
+                            bidBtn.style.cursor = "not-allowed";
+                        }
+                        
+                        clearInterval(intervalId);
+                        return;
+                    }
+
+                    // 時間未到：顯示倒數面板
+                    if(countdownPanel) countdownPanel.style.display = "block";
+                    if(expiredPanel) expiredPanel.style.display = "none";
+
+                    var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    document.getElementById("cd_days").innerText = days < 10 ? "0" + days : days;
+                    document.getElementById("cd_hours").innerText = hours < 10 ? "0" + hours : hours;
+                    document.getElementById("cd_min").innerText = minutes < 10 ? "0" + minutes : minutes;
+                    document.getElementById("cd_sec").innerText = seconds < 10 ? "0" + seconds : seconds;
+                }
+
+                var intervalId = setInterval(updateTimer, 1000);
+                updateTimer(); // 立即執行一次
+            })();
+        </script>
     {% endif %}
 
     <hr>

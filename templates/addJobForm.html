@@ -136,8 +136,8 @@
       <label>預算金額：</label>
       <input type="number" name="budget" placeholder="請輸入預算金額 (NT$)" required>
       
-      <label>競標截止日期與時間：</label>
-      <input type="datetime-local" name="deadline" required>
+      <label for="deadline">競標截止時間：</label>
+      <input type="datetime-local" name="deadline" id="deadlineInput" required>
 
       <label>需求文件（可上傳 PDF/DOCX/TXT）：</label>
       <input type="file" name="requirement_file" accept=".pdf,.docx,.txt">
@@ -147,5 +147,34 @@
 
     <p><a href="/">🏠 回首頁</a></p>
   </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const dateInput = document.getElementById('deadlineInput');
+        
+        // 取得現在時間
+        const now = new Date();
+        
+        // 為了符合 datetime-local 的格式 (YYYY-MM-DDTHH:MM)，我們需要調整時區差
+        // 台灣是 UTC+8，如果不調整直接 toISOString() 會變成 UTC 時間 (少8小時)
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        
+        // 轉成 ISO 字串並切取前 16 個字元 (YYYY-MM-DDTHH:MM)
+        const minDateTime = now.toISOString().slice(0, 16);
+        
+        // 設定 input 的最小值屬性
+        dateInput.min = minDateTime;
+        
+        // (選用) 為了防呆，如果使用者硬選，失去焦點時再次檢查
+        dateInput.addEventListener('change', function() {
+             const selected = new Date(this.value);
+             const current = new Date(); // 重新抓當下時間比較
+             if(selected < current) {
+                 alert("⚠️ 不能選擇過去的時間！");
+                 this.value = minDateTime; // 重置為現在
+             }
+        });
+    });
+</script>
 </body>
 </html>
