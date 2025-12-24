@@ -305,7 +305,27 @@ async def add_job(
 
         raise HTTPException(status_code=403, detail="只有甲方可新增工作")
 
-
+    # ✅ 新增驗證邏輯：精確到分鐘的比較
+    try:
+        # 將前端傳來的字串轉為 datetime 物件
+        # datetime-local 傳來的格式固定為 "%Y-%m-%dT%H:%M"
+        deadline_dt = datetime.strptime(deadline, "%Y-%m-%dT%H:%M")
+        
+        # 取得現在時間 (無秒數差異比較)
+        now = datetime.now()
+        
+        if deadline_dt <= now:
+            return HTMLResponse(
+                f"""
+                <script>
+                    alert('❌ 設定失敗！截止時間不能早於現在時間 ({now.strftime("%Y-%m-%d %H:%M")})');
+                    history.back();
+                </script>
+                """, 
+                status_code=400
+            )
+    except ValueError:
+        return HTMLResponse("❌ 時間格式錯誤", status_code=400)
 
     file_path = None
 
