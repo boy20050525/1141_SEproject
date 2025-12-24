@@ -186,6 +186,7 @@
   <div class="user-bar">
     {% if role %}
       歡迎，<strong>{{ username }}</strong> 用戶！
+      <a href="/editProfile" >編輯檔案</a>
       <a href="/logout">登出</a>
       {% if role == "甲方" %}
           <a href="/dashboard_client">我的案件</a>

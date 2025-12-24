@@ -2,132 +2,256 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>🧾 建立新帳號</title>
+  <title>加入我們 | 建立新帳號</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Noto Sans TC', sans-serif;
-    }
-
-    body {
-      margin: 0;
-      background-color: #f7f3ef;
-      color: #3b2f2f;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
-
+    * { box-sizing: border-box; font-family: 'Noto Sans TC', sans-serif; }
+    body { margin: 0; background-color: #f7f3ef; color: #3b2f2f; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    
     .register-container {
       background-color: #fffdfa;
-      width: 400px;
-      padding: 40px 50px;
-      border-radius: 15px;
-      box-shadow: 0 6px 20px rgba(80, 70, 60, 0.15);
-      text-align: center;
-    }
-
-    h2 {
-      color: #3e2e1e;
-      margin-bottom: 25px;
-      font-size: 26px;
-      letter-spacing: 1px;
-    }
-
-    label {
-      display: block;
-      text-align: left;
-      font-weight: 600;
-      color: #4a3b2a;
-      margin-top: 12px;
-      margin-bottom: 6px;
-    }
-
-    input, select {
       width: 100%;
-      padding: 10px 12px;
-      border-radius: 6px;
-      border: 1px solid #cdbda3;
-      background-color: #fffdf9;
-      font-size: 15px;
-      outline: none;
-      transition: all 0.3s ease;
+      max-width: 600px; /* 稍微加寬一點以容納標籤 */
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(59, 47, 47, 0.1);
+      border: 1px solid #e9dfd0;
     }
 
-    input:focus, select:focus {
-      border-color: #c2a676;
-      box-shadow: 0 0 5px rgba(194,166,118,0.4);
+    h2 { color: #3e2e1e; margin: 0 0 10px 0; font-size: 28px; text-align: center; }
+    .subtitle { text-align: center; color: #7a6b5b; margin-bottom: 30px; font-size: 14px; }
+
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-weight: 600; color: #5a4632; margin-bottom: 8px; font-size: 14px; }
+    
+    input[type="text"], input[type="email"], input[type="password"], textarea {
+      width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #d4c7b5;
+      background-color: #fffaf3; font-size: 15px; outline: none; transition: border-color 0.3s;
+    }
+    input:focus, textarea:focus { border-color: #c2a676; background-color: #fff; }
+    textarea { resize: vertical; min-height: 80px; }
+
+    /* --- 角色選擇樣式 --- */
+    .role-options { display: flex; gap: 10px; }
+    .role-label {
+      flex: 1; cursor: pointer; text-align: center; padding: 12px;
+      border: 1px solid #d4c7b5; border-radius: 8px; background: #fffaf3; color: #7a6b5b; transition: all 0.3s;
+    }
+    .role-input { display: none; }
+    .role-input:checked + .role-label {
+      background-color: #c2a676; color: white; border-color: #c2a676; font-weight: bold; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(194, 166, 118, 0.3);
+    }
+
+    /* --- 技能標籤多選樣式 (重點修改) --- */
+    .skills-wrapper {
+        border: 1px solid #e2d5c4;
+        padding: 15px;
+        border-radius: 8px;
+        background: #fffaf3;
+    }
+    .skill-category {
+        margin-bottom: 15px;
+    }
+    .category-title {
+        font-size: 12px;
+        color: #a88752;
+        font-weight: bold;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    /* 隱藏原本的 checkbox */
+    .skill-checkbox { display: none; }
+    
+    /* 自訂標籤樣式 */
+    .skill-tag {
+        font-size: 13px;
+        padding: 6px 12px;
+        border: 1px solid #d4c7b5;
+        border-radius: 20px;
+        color: #5a4632;
+        cursor: pointer;
+        background-color: white;
+        transition: all 0.2s;
+        user-select: none;
+    }
+    .skill-tag:hover {
+        border-color: #a88752;
+        background-color: #fcf9f5;
+    }
+    /* 選中狀態 */
+    .skill-checkbox:checked + .skill-tag {
+        background-color: #5a4632; /* 深棕色背景 */
+        color: #fff;
+        border-color: #5a4632;
+    }
+
+    /* 其他選項輸入框 */
+    #other-skill-input {
+        margin-top: 10px;
+        display: none; /* 預設隱藏 */
     }
 
     button {
-      margin-top: 25px;
-      width: 100%;
-      padding: 12px;
-      background-color: #c2a676;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
+      width: 100%; padding: 14px; background-color: #c2a676; color: white;
+      border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+      cursor: pointer; margin-top: 20px; transition: background 0.3s;
     }
+    button:hover { background-color: #a88752; }
 
-    button:hover {
-      background-color: #a88752;
-    }
-
-    p {
-      margin-top: 25px;
-      font-size: 14px;
-      color: #5a4632;
-    }
-
-    a {
-      color: #7a5e3e;
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    a:hover {
-      color: #a88752;
-      text-decoration: underline;
-    }
-
-    .footer-note {
-      margin-top: 30px;
-      font-size: 13px;
-      color: #7a6b5b;
-    }
+    .login-link { text-align: center; margin-top: 20px; font-size: 14px; color: #7a6b5b; }
+    .login-link a { color: #c2a676; text-decoration: none; font-weight: bold; }
+    .login-link a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="register-container">
-    <h2>🧾 建立新帳號</h2>
+    <h2>👋 歡迎加入</h2>
+    <p class="subtitle">建立帳號以開始您的委託或接案之旅</p>
 
-    <form action="/register" method="post">
-      <label>使用者名稱：</label>
-      <input type="text" name="username" required>
+    <form action="/register" method="post" enctype="multipart/form-data" id="registerForm">
+      
+      <div class="form-group">
+        <label>我是...</label>
+        <div class="role-options">
+          <input type="radio" name="role" id="role-client" value="甲方" class="role-input" checked>
+          <label for="role-client" class="role-label">💼 甲方 (委託人)</label>
+          
+          <input type="radio" name="role" id="role-freelancer" value="乙方" class="role-input">
+          <label for="role-freelancer" class="role-label">🛠️ 乙方 (接案人)</label>
+        </div>
+      </div>
 
-      <label>密碼：</label>
-      <input type="password" name="password" required>
+      <div class="form-group">
+        <label>使用者名稱</label>
+        <input type="text" name="username" placeholder="例：王小明 或 創意設計工作室" required>
+      </div>
 
-      <label>電子郵件：</label>
-      <input type="text" name="email" required>
+      <div class="form-group">
+        <label>電子郵件</label>
+        <input type="email" name="email" placeholder="name@example.com" required>
+      </div>
 
-      <label>角色：</label>
-      <select name="role" required>
-        <option value="甲方">甲方（委託人）</option>
-        <option value="乙方">乙方（接案人）</option>
-      </select>
+      <div class="form-group">
+        <label>密碼</label>
+        <input type="password" name="password" placeholder="至少 6 位數" required>
+      </div>
 
-      <button type="submit">✨ 建立帳號</button>
+      <div class="form-group">
+        <label>技能標籤 / 專長 (可多選)</label>
+        <input type="hidden" name="skills" id="final-skills">
+        
+        <div class="skills-wrapper">
+            <div class="skill-category">
+                <span class="category-title">💻 程式開發</span>
+                <div class="tags-container">
+                    <label><input type="checkbox" class="skill-checkbox" value="Python"><span class="skill-tag">Python</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="Web前端"><span class="skill-tag">Web 前端</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="Web後端"><span class="skill-tag">Web 後端</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="App開發"><span class="skill-tag">App 開發</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="資料分析"><span class="skill-tag">資料分析</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="AI/機器學習"><span class="skill-tag">AI/機器學習</span></label>
+                </div>
+            </div>
+
+            <div class="skill-category">
+                <span class="category-title">🎨 設計與多媒體</span>
+                <div class="tags-container">
+                    <label><input type="checkbox" class="skill-checkbox" value="平面設計"><span class="skill-tag">平面設計</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="UI/UX設計"><span class="skill-tag">UI/UX 設計</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="Logo設計"><span class="skill-tag">Logo/VI</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="插畫繪圖"><span class="skill-tag">插畫繪圖</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="影片剪輯"><span class="skill-tag">影片剪輯</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="3D建模"><span class="skill-tag">3D 建模</span></label>
+                </div>
+            </div>
+
+            <div class="skill-category">
+                <span class="category-title">📊 行銷與商業</span>
+                <div class="tags-container">
+                    <label><input type="checkbox" class="skill-checkbox" value="社群行銷"><span class="skill-tag">社群行銷</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="SEO優化"><span class="skill-tag">SEO 優化</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="文案寫作"><span class="skill-tag">文案寫作</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="翻譯"><span class="skill-tag">翻譯</span></label>
+                    <label><input type="checkbox" class="skill-checkbox" value="行政支援"><span class="skill-tag">行政支援</span></label>
+                </div>
+            </div>
+
+            <div class="skill-category" style="margin-bottom:0;">
+                <div class="tags-container">
+                    <label>
+                        <input type="checkbox" class="skill-checkbox" id="check-other">
+                        <span class="skill-tag" style="border-style: dashed;">➕ 其他</span>
+                    </label>
+                </div>
+                <input type="text" id="other-skill-input" placeholder="請輸入其他技能 (例如: 攝影, 配音...)">
+            </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>聯絡電話 (選填)</label>
+        <input type="text" name="phone" placeholder="0912-345-678">
+      </div>
+
+      <div class="form-group">
+        <label>自我介紹 (選填)</label>
+        <textarea name="bio" placeholder="簡單介紹一下您的經歷或服務..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>上傳大頭貼 (選填)</label>
+        <input type="file" name="avatar_file" accept="image/*" style="background:white; padding:8px;">
+      </div>
+
+      <button type="submit">✨ 立即註冊</button>
     </form>
 
-    <p>已經有帳號了嗎？ <a href="/loginForm">前往登入</a></p>
-    <div class="footer-note">© 2025 工作委託平台</div>
+    <div class="login-link">
+      已經有帳號了嗎？ <a href="/loginForm">直接登入</a>
+    </div>
   </div>
+
+  <script>
+    // 監聽表單提交，將勾選的標籤組合成字串
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        // 1. 取得所有被勾選的 checkbox (排除 "其他" 那個 checkbox)
+        const checkedBoxes = document.querySelectorAll('.skill-checkbox:checked:not(#check-other)');
+        
+        let skillsArray = [];
+        
+        // 2. 把一般選項加入陣列
+        checkedBoxes.forEach(box => {
+            skillsArray.push(box.value);
+        });
+
+        // 3. 處理 "其他" 選項
+        const otherCheck = document.getElementById('check-other');
+        const otherInput = document.getElementById('other-skill-input');
+        
+        if (otherCheck.checked && otherInput.value.trim() !== "") {
+            skillsArray.push(otherInput.value.trim());
+        }
+
+        // 4. 用逗號組合成字串，放入隱藏的 input
+        // 結果會像: "Python, Web前端, 攝影"
+        document.getElementById('final-skills').value = skillsArray.join(', ');
+    });
+
+    // 監聽 "其他" checkbox 的切換，顯示/隱藏輸入框
+    document.getElementById('check-other').addEventListener('change', function() {
+        const input = document.getElementById('other-skill-input');
+        if (this.checked) {
+            input.style.display = 'block';
+            input.focus();
+        } else {
+            input.style.display = 'none';
+        }
+    });
+  </script>
 </body>
 </html>

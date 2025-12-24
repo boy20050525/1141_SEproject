@@ -26,6 +26,7 @@ import os
 
 import time
 
+import shutil
 
 
 from db import getDB
@@ -168,6 +169,69 @@ async def home(request: Request, conn=Depends(getDB)):
         }
 
     )
+
+# 在 main.py 的「甲方 / 乙方 Dashboard」區塊附近加入
+
+@app.get("/editProfile")
+async def edit_profile_form(request: Request, conn=Depends(getDB)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/loginForm", status_code=302)
+
+    async with conn.cursor() as cur:
+        await cur.execute("SELECT * FROM users WHERE id = %s;", (user_id,))
+        user = await cur.fetchone()
+
+    if not user:
+        return HTMLResponse("找不到使用者", status_code=404)
+
+    return templates.TemplateResponse("editProfile.html", {
+        "request": request,
+        "user": user
+    })
+
+@app.post("/editProfile")
+async def edit_profile_submit(
+    request: Request,
+    username: str = Form(...),
+    phone: str = Form(None),
+    skills: str = Form(None),
+    bio: str = Form(None),
+    avatar_file: UploadFile = File(None),
+    conn=Depends(getDB)
+):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/loginForm", status_code=302)
+
+    # 處理頭像上傳 (邏輯同註冊)
+    avatar_sql = ""
+    params = [username, phone, skills, bio]
+
+    if avatar_file and avatar_file.filename:
+        upload_dir = "www/uploads/avatars"
+        os.makedirs(upload_dir, exist_ok=True)
+        file_ext = avatar_file.filename.split(".")[-1]
+        safe_filename = f"user_{user_id}_{int(time.time())}.{file_ext}"
+        file_path = os.path.join(upload_dir, safe_filename)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(avatar_file.file, buffer)
+        
+        avatar_sql = ", avatar = %s"
+        params.append(safe_filename)
+
+    params.append(user_id) # 最後一個 %s 是 WHERE id = %s
+
+    async with conn.cursor() as cur:
+        sql = f"UPDATE users SET username=%s, phone=%s, skills=%s, bio=%s {avatar_sql} WHERE id=%s"
+        await cur.execute(sql, tuple(params))
+        await conn.commit()
+
+    # 更新 Session 中的名稱（避免 Header 顯示舊名字）
+    request.session["username"] = username
+
+    return HTMLResponse("<script>alert('更新成功！'); window.location.href='/';</script>")
 
 
 # === 顯示案件詳情 (含競標清單 + 上傳檔案資訊) ===
