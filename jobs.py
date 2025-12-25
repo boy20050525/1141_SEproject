@@ -72,39 +72,70 @@ async def resetPassword(conn, user_id, new_password):
 # ---------------------------------
 # 1️⃣ 取得全部工作清單 (首頁)
 # ---------------------------------
-async def getJobList(conn):
+# 1. 修改 getJobList (取得全部)
+async def getJobList(conn, current_user_id=None): # 👈 多傳入 user_id
     async with conn.cursor() as cur:
         sql = """
         SELECT 
             j.id, j.title, j.content, j.status, j.budget, j.price,
-            c.username AS client_name,
+            c.username AS client_name, c.id AS client_id,
             f.username AS freelancer_name,
             j.created_at
         FROM jobs j
         LEFT JOIN users c ON j.client_id = c.id
         LEFT JOIN users f ON j.freelancer_id = f.id
-        ORDER BY j.id ASC;
+        WHERE 1=1
         """
-        await cur.execute(sql)
-        rows = await cur.fetchall()
-        return rows
-    
-# 依狀態取得工作清單
-async def getJobsByStatus(conn, status):
+        params = []
+
+        # ✅ 屏蔽邏輯：雙向過濾
+        if current_user_id:
+            sql += """
+                AND j.client_id NOT IN (
+                    SELECT blocked_id FROM blocked_users WHERE blocker_id = %s
+                )
+                AND j.client_id NOT IN (
+                    SELECT blocker_id FROM blocked_users WHERE blocked_id = %s
+                )
+            """
+            params.extend([current_user_id, current_user_id])
+            
+        sql += " ORDER BY j.id ASC;"
+        
+        await cur.execute(sql, tuple(params))
+        return await cur.fetchall()
+
+# 2. 修改 getJobsByStatus (依狀態篩選，也要過濾黑名單！)
+async def getJobsByStatus(conn, status, current_user_id=None): # 👈 這裡也要多傳 user_id
     async with conn.cursor() as cur:
-        await cur.execute("""
+        sql = """
             SELECT 
                 j.*, 
-                c.username AS client_name, 
+                c.username AS client_name, c.id AS client_id,
                 f.username AS freelancer_name
             FROM jobs j
             LEFT JOIN users c ON j.client_id = c.id
             LEFT JOIN users f ON j.freelancer_id = f.id
             WHERE j.status = %s
-            ORDER BY j.id DESC;
-        """, (status,))
-        result = await cur.fetchall()
-    return result
+        """
+        params = [status] # 先放入狀態參數
+
+        # ✅ 這裡也要加上一樣的屏蔽邏輯
+        if current_user_id:
+            sql += """
+                AND j.client_id NOT IN (
+                    SELECT blocked_id FROM blocked_users WHERE blocker_id = %s
+                )
+                AND j.client_id NOT IN (
+                    SELECT blocker_id FROM blocked_users WHERE blocked_id = %s
+                )
+            """
+            params.extend([current_user_id, current_user_id])
+            
+        sql += " ORDER BY j.id DESC;"
+
+        await cur.execute(sql, tuple(params))
+        return await cur.fetchall()
 
 
 
@@ -202,21 +233,35 @@ async def getJobsByFreelancer(conn, freelancer_id):
 # ---------------------------------
 # 7️⃣ 查詢乙方可報價的工作 (尚未有人接案)
 # ---------------------------------
-async def getAvailableJobs(conn):
+async def getAvailableJobs(conn, current_user_id=None): # 👈 多傳入 current_user_id
     async with conn.cursor() as cur:
         sql = """
         SELECT 
             j.id, j.title, j.status, j.budget, j.content,
-            c.username AS client_name,
+            c.username AS client_name, c.id AS client_id,
             j.created_at
         FROM jobs j
         LEFT JOIN users c ON j.client_id = c.id
         WHERE j.status IN ('新工作', '報價中')
-        ORDER BY j.id ASC;
         """
-        await cur.execute(sql)
-        rows = await cur.fetchall()
-        return rows
+        params = []
+
+        # ✅ 同樣的過濾邏輯
+        if current_user_id:
+            sql += """
+                AND j.client_id NOT IN (
+                    SELECT blocked_id FROM blocked_users WHERE blocker_id = %s
+                )
+                AND j.client_id NOT IN (
+                    SELECT blocker_id FROM blocked_users WHERE blocked_id = %s
+                )
+            """
+            params.extend([current_user_id, current_user_id])
+
+        sql += " ORDER BY j.id ASC;"
+        
+        await cur.execute(sql, tuple(params))
+        return await cur.fetchall()
 
 
 # ---------------------------------
@@ -506,3 +551,57 @@ async def getDeliverable(conn, job_id):
         await cur.execute(sql, (job_id,))
         row = await cur.fetchone()
         return row
+    
+# =============================
+# 🚫 屏蔽用戶相關功能
+# =============================
+
+# 1. 切換屏蔽狀態 (屏蔽/解屏蔽)
+async def toggleBlockUser(conn, blocker_id, blocked_id):
+    async with conn.cursor() as cur:
+        # 先檢查是否已經屏蔽
+        await cur.execute(
+            "SELECT id FROM blocked_users WHERE blocker_id=%s AND blocked_id=%s",
+            (blocker_id, blocked_id)
+        )
+        record = await cur.fetchone()
+
+        if record:
+            # 如果已經屏蔽 -> 解除屏蔽 (刪除紀錄)
+            await cur.execute(
+                "DELETE FROM blocked_users WHERE id=%s",
+                (record["id"],)
+            )
+            await conn.commit()
+            return "unblocked"
+        else:
+            # 如果還沒屏蔽 -> 新增屏蔽
+            await cur.execute(
+                "INSERT INTO blocked_users (blocker_id, blocked_id) VALUES (%s, %s)",
+                (blocker_id, blocked_id)
+            )
+            await conn.commit()
+            return "blocked"
+
+# 2. 檢查是否已屏蔽 (用於前端顯示按鈕狀態)
+async def isBlocked(conn, blocker_id, blocked_id):
+    async with conn.cursor() as cur:
+        await cur.execute(
+            "SELECT 1 FROM blocked_users WHERE blocker_id=%s AND blocked_id=%s",
+            (blocker_id, blocked_id)
+        )
+        return await cur.fetchone() is not None
+    
+# 3. 取得我的黑名單列表 (用於設定頁面管理)
+async def getBlockedUsers(conn, blocker_id):
+    async with conn.cursor() as cur:
+        # 關聯 users 表，抓出被封鎖者的名字和角色
+        sql = """
+            SELECT u.id, u.username, u.role, b.created_at
+            FROM blocked_users b
+            JOIN users u ON b.blocked_id = u.id
+            WHERE b.blocker_id = %s
+            ORDER BY b.created_at DESC;
+        """
+        await cur.execute(sql, (blocker_id,))
+        return await cur.fetchall()
