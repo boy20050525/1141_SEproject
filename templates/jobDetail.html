@@ -519,12 +519,34 @@
             <span style="color: green;">✔ 已上傳</span>
           {% endif %}
         </td>
-        <td>
-          {% if loop.last %}
-            <a href="/download/{{ job['id'] }}" class="btn" style="padding:5px 10px; background:#c2a676; color:white; border-radius:4px;">📥 下載此版本</a>
-          {% else %}
-            <span style="color:#999;">(歷史版本)</span>
-          {% endif %}
+        <td style="vertical-align: middle; text-align: center;">
+            <div style="position: relative; display: inline-block;">
+                
+                <a href="/download_history/{{ item['id'] }}" 
+                  style="display: block; padding: 6px 16px; background-color: #f0e4d5; color: #5a4632; border: 1px solid #d4c7b5; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s;">
+                  📥 下載
+                </a>
+
+                {% if loop.last %}
+                    <span style="
+                        position: absolute;
+                        top: -8px;      /* 往上浮出 */
+                        right: -10px;   /* 往右浮出 */
+                        background-color: #c2a676;
+                        color: white;
+                        font-size: 10px;
+                        font-weight: bold;
+                        padding: 2px 6px;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                        z-index: 1;
+                        white-space: nowrap; /* 防止文字換行 */
+                    ">
+                        NEW
+                    </span>
+                {% endif %}
+                
+            </div>
         </td>
       </tr>
       {% endfor %}
@@ -604,13 +626,35 @@
                 <span style="color: green;">✔ 已上傳</span>
               {% endif %}
             </td>
-            <td>
-              {% if loop.last %}
-                <a href="/download/{{ job['id'] }}" class="btn" style="padding:5px 10px; background:#c2a676; color:white; border-radius:4px;">📥 下載最新版本</a>
-              {% else %}
-                <span style="color:#999;">(歷史版本)</span>
-              {% endif %}
-            </td>
+              <td style="vertical-align: middle; text-align: center;">
+                <div style="position: relative; display: inline-block;">
+                    
+                    <a href="/download_history/{{ item['id'] }}" 
+                      style="display: block; padding: 6px 16px; background-color: #f0e4d5; color: #5a4632; border: 1px solid #d4c7b5; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.2s;">
+                      📥 下載
+                    </a>
+
+                    {% if loop.last %}
+                        <span style="
+                            position: absolute;
+                            top: -8px;      /* 往上浮出 */
+                            right: -10px;   /* 往右浮出 */
+                            background-color: #c2a676;
+                            color: white;
+                            font-size: 10px;
+                            font-weight: bold;
+                            padding: 2px 6px;
+                            border-radius: 10px;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                            z-index: 1;
+                            white-space: nowrap; /* 防止文字換行 */
+                        ">
+                            NEW
+                        </span>
+                    {% endif %}
+                    
+                </div>
+             </td>
           </tr>
           {% endfor %}
         </table>

@@ -257,7 +257,6 @@ async def readJob(request: Request, id: int, conn=Depends(getDB)):
     # 上傳成果（乙方已交付的檔案資訊）
 
     # 修改：使用 getDeliverables (複數) 抓取該案件的所有歷史版本
-    deliverable = await jobs.getDeliverable(conn, id)
     deliverables = await jobs.getDeliverables(conn, id)
     # 在 main.py 中呼叫評價相關函式
     rating_deadline = None
@@ -308,7 +307,6 @@ async def readJob(request: Request, id: int, conn=Depends(getDB)):
             "bids": bids,
 
             "is_expired": is_expired,
-            "deliverable": deliverable,
             "deliverables": deliverables,      # 🆕 新增：傳入完整歷史清單給前端表格使用
             "rating_deadline": rating_deadline, 
             "deliverable": latest_deliverable,  # 🔄 保留：傳入最新一筆 (維持舊有邏輯相容性，例如退件紅字顯示)
@@ -682,30 +680,44 @@ async def confirm_job(
 
 # 下載成果檔案
 
+# 下載成果檔案
 @app.get("/download/{job_id}")
-
 async def download_file(job_id: int, conn=Depends(getDB)):
-
-    deliverable = await jobs.getDeliverable(conn, job_id)
-
-    if not deliverable:
-
+    
+    # ✅ 修改後：改用複數版，並取出最後一筆
+    deliverables = await jobs.getDeliverables(conn, job_id)
+    
+    # 判斷列表是否為空
+    if not deliverables:
         return HTMLResponse("尚未上傳任何成果", status_code=404)
 
+    # 取出最新的一筆 (List 的最後一個元素)
+    deliverable = deliverables[-1] 
 
-
+    # --- 以下邏輯保持不變 ---
     file_path = deliverable["file_path"]
 
     if not os.path.exists(file_path):
 
         return HTMLResponse("檔案不存在", status_code=404)
 
-
-
     filename = os.path.basename(file_path)
 
     return FileResponse(file_path, filename=filename)
 
+# 🆕 新增：根據 deliverable_id (檔案流水號) 下載指定檔案
+@app.get("/download_history/{deliverable_id}")
+async def download_history_file(deliverable_id: int, conn=Depends(getDB)):
+    # 直接查該筆上傳紀錄的檔案路徑
+    async with conn.cursor() as cur:
+        await cur.execute("SELECT file_path FROM deliverables WHERE id = %s", (deliverable_id,))
+        record = await cur.fetchone()
+    
+    if not record or not os.path.exists(record["file_path"]):
+        return HTMLResponse("❌ 檔案不存在或已遺失", status_code=404)
+
+    filename = os.path.basename(record["file_path"])
+    return FileResponse(record["file_path"], filename=filename)
 
 
 # 下載需求文件
