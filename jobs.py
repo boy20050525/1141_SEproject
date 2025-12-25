@@ -498,11 +498,14 @@ async def getIssues(conn, job_id):
 async def createIssue(conn, job_id, title, user_id):
     async with conn.cursor() as cur:
         sql = """
-            INSERT INTO issues (job_id, title, created_by, status)
-            VALUES (%s, %s, %s, '未解決');
+            INSERT INTO issues (job_id, title, created_by, status, created_at)
+            VALUES (%s, %s, %s, '未解決', CURRENT_TIMESTAMP)
+            RETURNING id, created_at;
         """
         await cur.execute(sql, (job_id, title, user_id))
+        new_issue = await cur.fetchone()
         await conn.commit()
+        return new_issue
 
 # 新增留言
 async def addIssueComment(conn, issue_id, user_id, content, msg_type='text', file_path=None, filename=None):
@@ -518,12 +521,31 @@ async def addIssueComment(conn, issue_id, user_id, content, msg_type='text', fil
         await conn.commit()
         return new_comment # 回傳新建立的資料以便 WebSocket 廣播
 
-# 將 Issue 標記為已解決
-async def resolveIssue(conn, issue_id):
+# 修改：將 Issue 標記為已解決，並自動插入系統留言
+async def resolveIssue(conn, issue_id, user_id, username):
     async with conn.cursor() as cur:
-        sql = "UPDATE issues SET status='已解決' WHERE id=%s;"
-        await cur.execute(sql, (issue_id,))
+        # 1. 更新 Issue 狀態
+        sql_update = "UPDATE issues SET status='已解決' WHERE id=%s;"
+        await cur.execute(sql_update, (issue_id,))
+        
+        # 2. 插入系統自動訊息 (msg_type = 'system')
+        system_msg = f"系統：{username} 已將此問題標記為「已解決」"
+        sql_comment = """
+            INSERT INTO issue_comments (issue_id, user_id, content, msg_type, created_at)
+            VALUES (%s, %s, %s, 'system', CURRENT_TIMESTAMP)
+            RETURNING id, created_at;
+        """
+        await cur.execute(sql_comment, (issue_id, user_id, system_msg))
+        new_comment = await cur.fetchone()
+        
         await conn.commit()
+        
+        # 回傳這筆新留言的資訊，方便 main.py 廣播
+        return {
+            "id": new_comment["id"],
+            "content": system_msg,
+            "created_at": new_comment["created_at"]
+        }
 
 # 檢查是否有「未解決」的 Issue
 async def hasUnresolvedIssues(conn, job_id):
@@ -555,6 +577,13 @@ async def getDeliverable(conn, job_id):
         await cur.execute(sql, (job_id,))
         row = await cur.fetchone()
         return row
+
+# 新增：取得單一 Issue 的狀態 (用於權限檢查)
+async def getIssueStatus(conn, issue_id):
+    async with conn.cursor() as cur:
+        await cur.execute("SELECT status FROM issues WHERE id = %s;", (issue_id,))
+        row = await cur.fetchone()
+        return row["status"] if row else None
     
 # =============================
 # 🚫 屏蔽用戶相關功能
