@@ -289,7 +289,6 @@
     <p><b>內容：</b> {{ job["content"] }}</p>
     <p><b>狀態：</b> <span style="color: #c2a676; font-weight: bold;">{{ job["status"] }}</span></p>
     <p><b>預算：</b> ${{ job["budget"] }}</p>
-
     <p><b>委託人：</b> {% if job['client_id'] %}
         <a href="/api/userProfile/{{ job['client_id'] }}" style="color:#7a5e3e; text-decoration:none; font-weight:600;">
           {{ job["client_name"] }} 
@@ -318,7 +317,7 @@
     </a>
     </p>
     {% endif %}
-
+      {% if job["status"] == "新工作" or job["status"] == "待確認" %}
         {% if job["deadline"] %}
         <input type="hidden" id="deadlineTimestamp" value="{{ job['deadline'] }}">
 
@@ -350,7 +349,7 @@
         <div id="expiredPanel" class="expired-status">
             🚫 此案件競標已截止
         </div>
-
+      {% endif %}
         <script>
             (function() {
                 var deadlineStr = document.getElementById("deadlineTimestamp").value;
