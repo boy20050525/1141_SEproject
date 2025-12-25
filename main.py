@@ -46,7 +46,7 @@ from routes.dbQuery import router as db_router
 from datetime import datetime, timedelta
 from routes.ratings import router as rating_router
 from routes import ratings as ratings_module
-
+from fastapi.responses import JSONResponse
 # =============================
 
 # 初始化 FastAPI 應用
@@ -1105,6 +1105,10 @@ async def send_chat_message(
     if not user_id:
         return JSONResponse({"error": "未登入"}, status_code=401)
 
+    current_status = await jobs.getIssueStatus(conn, issue_id)
+    if current_status == "已解決":
+        return JSONResponse({"status": "error", "message": "❌ 此問題已結案，無法再傳送訊息"}, status_code=400)
+
     file_path = None
     filename = None
     display_content = content
@@ -1152,35 +1156,38 @@ async def send_chat_message(
 # 新增 Issue (甲方)
 
 @app.post("/api/addIssue")
-
 async def add_issue(
-
     request: Request,
-
     job_id: int = Form(...),
-
     title: str = Form(...),
-
     conn=Depends(getDB)
-
 ):
-
     user_id = request.session.get("user_id")
-
     role = request.session.get("role")
-
+    username = request.session.get("username") # 取得使用者名稱以便顯示
     
-
     # 權限檢查：只有甲方可以開 Issue
-
     if role != "甲方":
-
         return HTMLResponse("權限不足", status_code=403)
-
         
+    # 1. 呼叫修改後的 createIssue (取得新 Issue 的 ID)
+    new_issue = await jobs.createIssue(conn, job_id, title, user_id)
 
-    await jobs.createIssue(conn, job_id, title, user_id)
+    # 2. 準備廣播資料 (通知所有人有個新 Issue 被建立了)
+    broadcast_data = {
+        "msg_type": "new_issue",  # 🔥 新的訊息類型
+        "job_id": job_id,
+        "issue_id": new_issue["id"],
+        "title": title,
+        "status": "未解決",
+        "creator": username,
+        "created_at": new_issue["created_at"].strftime("%Y-%m-%d %H:%M")
+    }
 
+    # 3. 透過 WebSocket 廣播
+    await manager.broadcast(broadcast_data, job_id)
+
+    # 4. 甲方自己刷新頁面 (Redirect)
     return RedirectResponse(url=f"/read/{job_id}", status_code=302)
 
 
@@ -1218,32 +1225,41 @@ async def add_comment(
 
 
 # 解決 Issue (甲方)
-
 @app.post("/api/resolveIssue")
-
 async def resolve_issue(
-
     request: Request,
-
     job_id: int = Form(...),
-
     issue_id: int = Form(...),
-
     conn=Depends(getDB)
-
 ):
-
+    user_id = request.session.get("user_id")
+    username = request.session.get("username")
     role = request.session.get("role")
 
     if role != "甲方":
-
         return HTMLResponse("權限不足", status_code=403)
 
+    # 1. 呼叫新的 jobs.resolveIssue (會回傳新建立的留言資料)
+    result = await jobs.resolveIssue(conn, issue_id, user_id, username)
 
+    # 2. 準備廣播訊息
+    broadcast_data = {
+        "issue_id": issue_id,
+        "username": "系統通知",  # 顯示名稱
+        "role": "system",       # 角色設為 system
+        "content": result["content"],
+        "msg_type": "system",   # 關鍵類型
+        "file_path": None,
+        "filename": None,
+        "created_at": result["created_at"].strftime("%H:%M") # 只取時間
+    }
 
-    await jobs.resolveIssue(conn, issue_id)
+    # 3. 透過 WebSocket 廣播給所有人 (包含正在看頁面的乙方)
+    await manager.broadcast(broadcast_data, job_id)
 
+    # 4. 甲方自己會刷新頁面 (Redirect)，所以不用擔心重複顯示
     return RedirectResponse(url=f"/read/{job_id}", status_code=302)
+
 # =============================
 # 查看評價表單頁面
 # =============================

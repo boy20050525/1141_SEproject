@@ -107,6 +107,26 @@
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.85; } 100% { opacity: 1; } }
 
     footer { text-align: center; padding: 20px; font-size: 14px; color: #7a6b5b; }
+
+    SS
+
+    /* --- 新增：系統訊息專用樣式 --- */
+    .chat-msg.system {
+        align-self: center;        /* 置中對齊 */
+        align-items: center;
+        margin: 15px 0;
+        max-width: 90%;
+    }
+    .chat-msg.system .chat-bubble {
+        background-color: rgba(0, 0, 0, 0.05); /* 極淺灰色背景 */
+        color: #666;               /* 深灰色文字 */
+        border: 1px solid #ddd;
+        border-radius: 20px;       /* 膠囊狀圓角 */
+        font-size: 13px;
+        padding: 4px 15px;
+        box-shadow: none;          /* 移除陰影 */
+        text-align: center;
+    }
   </style>
 </head>
 
@@ -266,85 +286,96 @@
     {% endif %}
 
     <h3 style="border-left-color: #ef4444;">🐞 問題追蹤與討論</h3>
-    
+    <div id="issues-list">
     <input type="hidden" id="currentUserId" value="{{ user_id }}">
     <input type="hidden" id="currentJobId" value="{{ job['id'] }}">
-
-    {% if issues %}
-        {% for issue in issues %}
-            <div class="issue-box" style="{{ 'border-color:#10b981;' if issue['status']=='已解決' else 'border-color:#fca5a5;' }}">
-                <div class="issue-header">
-                    <div>
-                        <span class="status-tag {{ 'status-resolved' if issue['status']=='已解決' else 'status-open' }}">
-                            {{ issue['status'] }}
-                        </span>
-                        <strong style="font-size:18px; margin-left:8px;">{{ issue['title'] }}</strong>
-                    </div>
-                    {% if role == "甲方" and issue['status'] == '未解決' %}
-                    <form action="/api/resolveIssue" method="post" style="margin:0;">
-                        <input type="hidden" name="job_id" value="{{ job['id'] }}">
-                        <input type="hidden" name="issue_id" value="{{ issue['id'] }}">
-                        <button type="submit" class="success-btn">✨ 標記為已解決</button>
-                    </form>
-                    {% endif %}
-                </div>
-
-                <div class="chat-container" id="chat-box-{{ issue['id'] }}">
-                    {% for comment in issue["comments"] %}
-                        {% set is_me = (comment["user_id"] == user_id) %}
-                        <div class="chat-msg {{ 'self' if is_me else 'other' }}">
-                            <div class="chat-bubble">
-                                {% if not is_me %}
-                                    <small style="display:block; font-weight:bold; margin-bottom:3px; opacity:0.8;">{{ comment["username"] }} ({{ comment["role"] }})</small>
-                                {% endif %}
-                                
-                                {% if comment["msg_type"] == "text" %}
-                                    {{ comment["content"] }}
-                                {% elif comment["msg_type"] == "sticker" %}
-                                    <span class="msg-sticker">{{ comment["content"] }}</span>
-                                {% elif comment["msg_type"] == "image" %}
-                                    <a href="/static/{{ comment['file_path'] }}" target="_blank">
-                                        <img src="/static/{{ comment['file_path'] }}" class="msg-image">
-                                    </a>
-                                {% elif comment["msg_type"] == "file" %}
-                                    <a href="/static/{{ comment['file_path'] }}" target="_blank" class="msg-file">
-                                        📄 {{ comment["filename"] }} (點擊下載)
-                                    </a>
-                                {% endif %}
-                            </div>
-                            <div class="chat-meta">{{ comment["created_at"].strftime("%H:%M") if comment["created_at"] else "" }}</div>
+        {% if issues %}
+            {% for issue in issues %}
+                <div class="issue-box" style="{{ 'border-color:#10b981;' if issue['status']=='已解決' else 'border-color:#fca5a5;' }}">
+                    <div class="issue-header">
+                        <div>
+                            <span class="status-tag {{ 'status-resolved' if issue['status']=='已解決' else 'status-open' }}">
+                                {{ issue['status'] }}
+                            </span>
+                            <strong style="font-size:18px; margin-left:8px;">{{ issue['title'] }}</strong>
                         </div>
-                    {% endfor %}
-                </div>
+                        {% if role == "甲方" and issue['status'] == '未解決' %}
+                        <form action="/api/resolveIssue" method="post" style="margin:0;">
+                            <input type="hidden" name="job_id" value="{{ job['id'] }}">
+                            <input type="hidden" name="issue_id" value="{{ issue['id'] }}">
+                            <button type="submit" class="success-btn">✨ 標記為已解決</button>
+                        </form>
+                        {% endif %}
+                    </div>
 
-                {% if issue['status'] == '未解決' %}
-                <div class="chat-toolbar">
-                    <button type="button" class="tool-btn" onclick="toggleStickerPicker({{ issue['id'] }})">☺</button>
-                    <div id="sticker-picker-{{ issue['id'] }}" class="sticker-picker">
-                        {% for sticker in ['👍', '👌', '❤️', '😂', '😭', '😡', '🙏', '🎉', '🤔', '👀'] %}
-                            <span class="sticker-item" onclick="sendSticker({{ issue['id'] }}, '{{ sticker }}')">{{ sticker }}</span>
+                    <div class="chat-container" id="chat-box-{{ issue['id'] }}">
+                        {% for comment in issue["comments"] %}
+                            {% set is_me = (comment["user_id"] == user_id) %}
+                            
+                            {% if comment['msg_type'] == 'system' %}
+                                <div class="chat-msg system">
+                                    <div class="chat-bubble">
+                                        {{ comment['content'] }}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="chat-msg {{ 'self' if is_me else 'other' }}">
+                                    <div class="chat-bubble">
+                                        {% if not is_me %}
+                                            <small style="display:block; font-weight:bold; margin-bottom:3px; opacity:0.8;">{{ comment["username"] }} ({{ comment["role"] }})</small>
+                                        {% endif %}
+                                        
+                                        {% if comment["msg_type"] == "text" %}
+                                            {{ comment["content"] }}
+                                        {% elif comment["msg_type"] == "sticker" %}
+                                            <span class="msg-sticker">{{ comment["content"] }}</span>
+                                        {% elif comment["msg_type"] == "image" %}
+                                            <a href="/static/{{ comment['file_path'] }}" target="_blank">
+                                                <img src="/static/{{ comment['file_path'] }}" class="msg-image">
+                                            </a>
+                                        {% elif comment["msg_type"] == "file" %}
+                                            <a href="/static/{{ comment['file_path'] }}" target="_blank" class="msg-file">
+                                                📄 {{ comment["filename"] }} (點擊下載)
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                    <div class="chat-meta">{{ comment["created_at"].strftime("%H:%M") if comment["created_at"] else "" }}</div>
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     </div>
 
-                    <button type="button" class="tool-btn" onclick="document.getElementById('file-input-{{ issue['id'] }}').click()">📎</button>
-                    <input type="file" id="file-input-{{ issue['id'] }}" style="display: none;" onchange="handleFileUpload({{ issue['id'] }}, this)">
+                    {% if issue['status'] == '未解決' %}
+                        <div class="chat-toolbar" id="toolbar-{{ issue['id'] }}">
+                            <button type="button" class="tool-btn" onclick="toggleStickerPicker({{ issue['id'] }})">☺</button>
+                            <div id="sticker-picker-{{ issue['id'] }}" class="sticker-picker">
+                                {% for sticker in ['👍', '👌', '❤️', '😂', '😭', '😡', '🙏', '🎉', '🤔', '👀'] %}
+                                    <span class="sticker-item" onclick="sendSticker({{ issue['id'] }}, '{{ sticker }}')">{{ sticker }}</span>
+                                {% endfor %}
+                            </div>
 
-                    <input type="text" id="msg-input-{{ issue['id'] }}" placeholder="輸入訊息..." 
-                           style="flex-grow:1; border:none; outline:none; background:transparent;"
-                           onkeypress="if(event.key === 'Enter') sendText({{ issue['id'] }})">
-                    
-                    <button type="button" onclick="sendText({{ issue['id'] }})" style="margin:0; padding:6px 15px;">傳送</button>
+                            <button type="button" class="tool-btn" onclick="document.getElementById('file-input-{{ issue['id'] }}').click()">📎</button>
+                            <input type="file" id="file-input-{{ issue['id'] }}" style="display: none;" onchange="handleFileUpload({{ issue['id'] }}, this)">
+
+                            <input type="text" id="msg-input-{{ issue['id'] }}" placeholder="輸入訊息..." 
+                                style="flex-grow:1; border:none; outline:none; background:transparent;"
+                                onkeypress="if(event.key === 'Enter') sendText({{ issue['id'] }})">
+                            
+                            <button type="button" onclick="sendText({{ issue['id'] }})" style="margin:0; padding:6px 15px;">傳送</button>
+                        </div>
+                    {% endif %}
+                    <p id="closed-msg-{{ issue['id'] }}" 
+                    style="text-align:center; color:#999; font-size:14px; {{ 'display:none;' if issue['status'] == '未解決' else '' }}">
+                        (此問題已結案，無法再傳送訊息)
+                    </p>
                 </div>
-                {% else %}
-                    <p style="text-align:center; color:#999; font-size:14px;">(此問題已結案，無法再傳送訊息)</p>
-                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div style="margin-top: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px dashed #ccc; color: #666; text-align: center;">
+                <p>目前尚未建立任何問題追蹤事項。</p>
             </div>
-        {% endfor %}
-    {% else %}
-        <div style="margin-top: 20px; padding: 20px; background: #fff; border-radius: 8px; border: 1px dashed #ccc; color: #666; text-align: center;">
-            <p>目前尚未建立任何問題追蹤事項。</p>
-        </div>
-    {% endif %}
+        {% endif %}
+    </div>
 
     {% if role == "甲方" and job["status"] != "已完成" %}
     <div style="background-color:#fff3cd; padding:15px; border-radius:10px; margin-top: 20px;">
@@ -433,10 +464,13 @@
 
   <footer>© 2025 工作委託平台 | 案件詳情頁</footer>
 
-  <script>
+<script>
     document.addEventListener("DOMContentLoaded", function() {
         const jobId = document.getElementById("currentJobId").value;
         const myId = document.getElementById("currentUserId").value;
+        const myRole = "{{ role }}";
+        // 注意：Jinja2 變數在 JS 中要加引號
+        const myUsername = "{{ my_username }}";
 
         // 建立 WebSocket 連線
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -448,7 +482,14 @@
 
         ws.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            appendMsg(data);
+
+            // 🔥 判斷訊息類型 🔥
+            if (data.msg_type === 'new_issue') {
+                appendNewIssue(data);
+            } else {
+                // 原本的聊天訊息
+                appendMsg(data);
+            }
         };
 
         ws.onclose = function() {
@@ -469,7 +510,11 @@
             })
             .then(res => res.json())
             .then(data => {
-                if(data.status !== "ok") alert("發送失敗");
+                if(data.status === "error") {
+                     alert(data.message); // 顯示後端回傳的錯誤 (例如已結案)
+                } else if(data.status !== "ok") {
+                     alert("發送失敗");
+                }
             })
             .catch(err => console.error("Error:", err));
         };
@@ -492,7 +537,9 @@
         // 2. 切換貼圖選單
         window.toggleStickerPicker = function(issueId) {
             const picker = document.getElementById(`sticker-picker-${issueId}`);
-            picker.style.display = (picker.style.display === "flex") ? "none" : "flex";
+            if (picker) {
+                picker.style.display = (picker.style.display === "flex") ? "none" : "flex";
+            }
         };
 
         // 3. 發送貼圖
@@ -504,7 +551,8 @@
             fd.append("content", sticker);
             
             postChat(fd, issueId);
-            document.getElementById(`sticker-picker-${issueId}`).style.display = "none";
+            const picker = document.getElementById(`sticker-picker-${issueId}`);
+            if (picker) picker.style.display = "none";
         };
 
         // 4. 發送檔案/圖片
@@ -528,32 +576,131 @@
             const box = document.getElementById(`chat-box-${data.issue_id}`);
             if(!box) return;
 
-            const isMe = (data.username === "{{ my_username }}"); // 簡單判斷
-            const div = document.createElement("div");
-            div.className = `chat-msg ${isMe ? 'self' : 'other'}`;
-            
-            let contentHtml = "";
-            if(data.msg_type === 'text') {
-                contentHtml = data.content;
-            } else if(data.msg_type === 'sticker') {
-                contentHtml = `<span class="msg-sticker">${data.content}</span>`;
-            } else if(data.msg_type === 'image') {
-                contentHtml = `<a href="/static/${data.file_path}" target="_blank"><img src="/${data.file_path}" class="msg-image"></a>`;
-            } else if(data.msg_type === 'file') {
-                contentHtml = `<a href="/static/${data.file_path}" target="_blank" class="msg-file">📄 ${data.filename}</a>`;
+            // 判斷是否為系統訊息
+            const isSystem = (data.msg_type === 'system');
+
+            // 🔥 UI 切換邏輯：如果是「已解決」訊息，隱藏輸入框 🔥
+            if (isSystem && data.content.includes("已解決")) {
+                const toolbar = document.getElementById(`toolbar-${data.issue_id}`);
+                if (toolbar) toolbar.style.display = 'none';
+
+                const closedMsg = document.getElementById(`closed-msg-${data.issue_id}`);
+                if (closedMsg) closedMsg.style.display = 'block';
+
+                const issueBox = box.closest('.issue-box');
+                const statusTag = issueBox ? issueBox.querySelector('.status-tag') : null;
+                if (statusTag) {
+                    statusTag.className = 'status-tag status-resolved';
+                    statusTag.innerText = '已解決';
+                }
             }
 
-            // 產生 HTML
-            div.innerHTML = `
-                <div class="chat-bubble">
-                    ${!isMe ? `<small style="display:block; font-weight:bold; margin-bottom:3px; opacity:0.8;">${data.username} (${data.role})</small>` : ''}
-                    ${contentHtml}
-                </div>
-                <div class="chat-meta">${data.created_at.split(' ')[1] || ''}</div>
-            `;
-            
+            const isMe = (data.username === myUsername);
+            const div = document.createElement("div");
+
+            if (isSystem) {
+                div.className = "chat-msg system";
+                div.innerHTML = `
+                    <div class="chat-bubble">
+                        ${data.content}
+                    </div>
+                `;
+            } else {
+                // 一般訊息邏輯
+                div.className = `chat-msg ${isMe ? 'self' : 'other'}`;
+                
+                let contentHtml = "";
+                if(data.msg_type === 'text') {
+                    contentHtml = data.content;
+                } else if(data.msg_type === 'sticker') {
+                    contentHtml = `<span class="msg-sticker">${data.content}</span>`;
+                } else if(data.msg_type === 'image') {
+                    contentHtml = `<a href="/static/${data.file_path}" target="_blank"><img src="/static/${data.file_path}" class="msg-image"></a>`;
+                } else if(data.msg_type === 'file') {
+                    contentHtml = `<a href="/static/${data.file_path}" target="_blank" class="msg-file">📄 ${data.filename}</a>`;
+                }
+
+                div.innerHTML = `
+                    <div class="chat-bubble">
+                        ${!isMe ? `<small style="display:block; font-weight:bold; margin-bottom:3px; opacity:0.8;">${data.username} (${data.role})</small>` : ''}
+                        ${contentHtml}
+                    </div>
+                    <div class="chat-meta">${data.created_at.split(' ')[1] || ''}</div>
+                `;
+            }
+
+            // ✅ 修正：無論是系統訊息還是普通訊息，都要加入對話框
             box.appendChild(div);
             scrollToBottom(data.issue_id);
+        } // ✅ 這裡補上了原本缺少的右大括號！
+
+        // 6. 動態產生新 Issue 的 HTML
+        function appendNewIssue(data) {
+            const container = document.getElementById('issues-list');
+            
+            // 如果原本顯示 "目前尚未建立..."，先移除它
+            const noMsg = document.getElementById('no-issue-msg');
+            if (noMsg) noMsg.remove();
+
+            const issueId = data.issue_id;
+            
+            // 建立外框
+            const box = document.createElement('div');
+            box.className = 'issue-box';
+            box.style.borderColor = '#fca5a5'; // 未解決顏色
+
+            // 判斷是否顯示「解決按鈕」 (只有甲方看得到)
+            let resolveBtnHtml = '';
+            if (myRole === '甲方') {
+                resolveBtnHtml = `
+                    <form action="/api/resolveIssue" method="post" style="margin:0;">
+                        <input type="hidden" name="job_id" value="${data.job_id}">
+                        <input type="hidden" name="issue_id" value="${issueId}">
+                        <button type="submit" class="success-btn">✨ 標記為已解決</button>
+                    </form>
+                `;
+            }
+
+            // 組合 HTML
+            box.innerHTML = `
+                <div class="issue-header">
+                    <div>
+                        <span class="status-tag status-open">${data.status}</span>
+                        <strong style="font-size:18px; margin-left:8px;">${data.title}</strong>
+                    </div>
+                    ${resolveBtnHtml}
+                </div>
+
+                <div class="chat-container" id="chat-box-${issueId}">
+                    <div class="chat-msg system">
+                        <div class="chat-bubble">系統：${data.creator} 建立了此問題追蹤</div>
+                    </div>
+                </div>
+
+                <div class="chat-toolbar" id="toolbar-${issueId}">
+                    <button type="button" class="tool-btn" onclick="toggleStickerPicker(${issueId})">☺</button>
+                    <div id="sticker-picker-${issueId}" class="sticker-picker">
+                        ${ ['👍', '👌', '❤️', '😂', '😭', '😡', '🙏', '🎉', '🤔', '👀'].map(s => 
+                            `<span class="sticker-item" onclick="sendSticker(${issueId}, '${s}')">${s}</span>`
+                        ).join('') }
+                    </div>
+
+                    <button type="button" class="tool-btn" onclick="document.getElementById('file-input-${issueId}').click()">📎</button>
+                    <input type="file" id="file-input-${issueId}" style="display: none;" onchange="handleFileUpload(${issueId}, this)">
+
+                    <input type="text" id="msg-input-${issueId}" placeholder="輸入訊息..." 
+                        style="flex-grow:1; border:none; outline:none; background:transparent;"
+                        onkeypress="if(event.key === 'Enter') sendText(${issueId})">
+                    
+                    <button type="button" onclick="sendText(${issueId})" style="margin:0; padding:6px 15px;">傳送</button>
+                </div>
+
+                <p id="closed-msg-${issueId}" style="text-align:center; color:#999; font-size:14px; display:none;">
+                    (此問題已結案，無法再傳送訊息)
+                </p>
+            `;
+
+            container.appendChild(box);
         }
 
         // 初始化：所有對話框捲動到底部
@@ -561,6 +708,6 @@
             box.scrollTop = box.scrollHeight;
         });
     });
-  </script>
+</script>
 </body>
 </html>
