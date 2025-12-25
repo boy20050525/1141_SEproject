@@ -13,13 +13,16 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 def normalize_score(value):
+    """严格验证并标准化评分"""
     try:
         value = int(value)
-        if 1 <= value <= 5:
-            return value
-        return 1
-    except:
-        return 1
+        # 严格限制在 1-5 之间
+        if value < 1 or value > 5:
+            raise ValueError(f"评分必须在 1-5 之间，收到: {value}")
+        return value
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"无效的评分值: {str(e)}")
+
 # =============================
 # 1️⃣ 提交評價
 # =============================
@@ -29,10 +32,15 @@ async def submitRating(conn, job_id, rater_id, ratee_id, rater_role,
     提交評價 - 必須在期限內
     """
     
-    # 安全處理評分
-    dim1_score = normalize_score(dim1_score)
-    dim2_score = normalize_score(dim2_score)
-    dim3_score = normalize_score(dim3_score)
+    # 🔒 严格验证所有评分（防止篡改）
+    try:
+        dim1_score = normalize_score(dim1_score)
+        dim2_score = normalize_score(dim2_score)
+        dim3_score = normalize_score(dim3_score)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"评分验证失败: {str(e)}")
 
     async with conn.cursor() as cur:
         
@@ -61,6 +69,10 @@ async def submitRating(conn, job_id, rater_id, ratee_id, rater_role,
         
         time_remaining = deadline_time - current_time
         print(f"✅ 評價仍在期限內，剩餘時間: {time_remaining}")
+        
+        # 🔒 验证评论长度（防止注入攻击）
+        if len(comment) > 1000:
+            raise HTTPException(status_code=400, detail="评论长度不能超过1000字符")
         
         # 插入或更新評價記錄
         sql = """
@@ -98,7 +110,7 @@ async def submitRating(conn, job_id, rater_id, ratee_id, rater_role,
             )
         
         await conn.commit()
-        print(f"✅ 評價已提交: rater_id={rater_id}, ratee_id={ratee_id}")
+        print(f"✅ 評價已提交: rater_id={rater_id}, ratee_id={ratee_id}, scores=[{dim1_score},{dim2_score},{dim3_score}]")
         return "success"
 
 
@@ -268,10 +280,6 @@ async def createRatingDeadline(conn, job_id):
     評價截止日期：結案後 1 天（可修改）
     """
     async with conn.cursor() as cur:
-        # 如果要改為其他時間，修改這裡：
-        # - 1小時：timedelta(hours=1)
-        # - 3天：timedelta(days=3)
-        # - 7天：timedelta(days=7)
         deadline = datetime.now() + timedelta(days=1)
         
         sql = """
@@ -299,7 +307,6 @@ async def getRatingDeadline(conn, job_id):
         result = await cur.fetchone()
         
         if result:
-            # 過期檢查
             is_expired = datetime.now() > result["rating_deadline"]
             print(f"評價期限檢查: job_id={job_id}, deadline={result['rating_deadline']}, expired={is_expired}")
         
@@ -377,9 +384,9 @@ async def rating_form(
             "request": request,
             "user": user,         
             "ratee": ratee,       
+            "ratee_role": ratee["role"],  # 🔒 添加这个，前端需要用
             "job_id": job_id,
 
-            # 前端直接用 avg_score 與 total_ratings
             "avg_score": rating_stats["average_overall_rating"],
             "total_ratings": rating_stats["total_ratings"],
 
@@ -413,16 +420,21 @@ async def submit_rating_api(
         raise HTTPException(status_code=403, detail="未登入")
     
     try:
-        # ✅ 轉換字符串為整數
+        # ✅ 转换并严格验证
         job_id = int(job_id)
         ratee_id = int(ratee_id)
-        dim1 = int(dimension1_score)
-        dim2 = int(dimension2_score)
-        dim3 = int(dimension3_score)
         
-        # ✅ 驗證分數範圍
-        if dim1 < 1 or dim1 > 5 or dim2 < 1 or dim2 > 5 or dim3 < 1 or dim3 > 5:
-            raise HTTPException(status_code=400, detail="評分必須在 1-5 之間")
+        # 🔒 使用 normalize_score 进行严格验证
+        dim1 = normalize_score(dimension1_score)
+        dim2 = normalize_score(dimension2_score)
+        dim3 = normalize_score(dimension3_score)
+        
+        # 🔒 二次验证（防御性编程）
+        if not all(1 <= score <= 5 for score in [dim1, dim2, dim3]):
+            raise HTTPException(status_code=400, detail="评分必须在 1-5 之间")
+        
+        # 🔒 日志记录（用于审计）
+        print(f"🔍 评分验证通过: user={rater_id}, scores=[{dim1},{dim2},{dim3}]")
         
         result = await submitRating(
             conn, job_id, rater_id, ratee_id, role,
@@ -431,12 +443,16 @@ async def submit_rating_api(
         
         if result == "rating_expired":
             raise HTTPException(status_code=410, detail="評價期限已過")
+        elif result == "no_deadline":
+            raise HTTPException(status_code=403, detail="此案件無評價期限")
         
-        return {"status": "success"}
+        return {"status": "success", "message": "评价已成功提交"}
     
+    except HTTPException:
+        raise
     except ValueError as e:
+        print(f"❌ 数据格式错误: {str(e)}")
         raise HTTPException(status_code=400, detail=f"數據格式錯誤：{str(e)}")
     except Exception as e:
+        print(f"❌ 提交失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"提交失敗：{str(e)}")
-
-
