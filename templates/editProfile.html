@@ -9,7 +9,7 @@
     body { margin: 0; background-color: #f7f3ef; color: #3b2f2f; padding: 40px 20px; }
     
     .container {
-      max-width: 800px; /* 加寬一點以容納標籤 */
+      max-width: 800px;
       margin: 0 auto;
       background-color: #fffdfa;
       border-radius: 15px;
@@ -46,7 +46,7 @@
     }
     textarea { min-height: 120px; resize: vertical; }
     
-    /* --- 技能標籤多選樣式 (與 Register 同步) --- */
+    /* --- 技能標籤多選樣式 --- */
     .skills-wrapper {
         border: 1px solid #e2d5c4;
         padding: 20px;
@@ -84,6 +84,13 @@
 
     input[type="file"] { display: none; }
     .upload-btn { cursor: pointer; color: #7a5e3e; text-decoration: underline; font-weight: 600; }
+    
+    /* 黑名單區塊樣式 */
+    .blocked-users-section {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 10px;
+    }
   </style>
 </head>
 <body>
@@ -178,6 +185,53 @@
     </form>
   </div>
 
+  <hr style="margin: 40px auto; max-width: 800px; border: 0; border-top: 1px solid #d4c7b5;">
+
+  <div class="blocked-users-section">
+      <div class="container" style="border: 1px solid #ef4444; box-shadow: none;">
+          <h3 style="color: #4b3c2b; margin-top: 0;">🚫 黑名單管理</h3>
+          <p style="color: #666; font-size: 14px;">您封鎖的用戶列表，解除後即可再次看到對方的案件。</p>
+
+          {% if blocked_users %}
+              <table style="width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff;">
+                  <thead>
+                      <tr style="background: #f3f3f3; text-align: left;">
+                          <th style="padding: 10px; border-bottom: 2px solid #ddd;">用戶名稱</th>
+                          <th style="padding: 10px; border-bottom: 2px solid #ddd;">角色</th>
+                          <th style="padding: 10px; border-bottom: 2px solid #ddd;">操作</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {% for blocked in blocked_users %}
+                      <tr style="border-bottom: 1px solid #eee;">
+                          <td style="padding: 10px;">
+                              <a href="/api/userProfile/{{ blocked.id }}" style="color: #333; text-decoration: none; font-weight: bold;">
+                                  {{ blocked.username }}
+                              </a>
+                          </td>
+                          <td style="padding: 10px;">{{ blocked.role }}</td>
+                          <td style="padding: 10px;">
+                              <form action="/api/toggleBlock" method="post" style="margin:0;">
+                                  <input type="hidden" name="blocked_id" value="{{ blocked.id }}">
+                                  <button type="submit" 
+                                          style="background-color: #6b7280; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;"
+                                          onclick="return confirm('確定要解除對 {{ blocked.username }} 的封鎖嗎？');">
+                                      🔓 解除封鎖
+                                  </button>
+                              </form>
+                          </td>
+                      </tr>
+                      {% endfor %}
+                  </tbody>
+              </table>
+          {% else %}
+              <div style="padding: 30px; background: #fffaf3; color: #888; text-align: center; border-radius: 8px; border: 1px dashed #d4c7b5;">
+                  目前沒有封鎖任何人 🕊️
+              </div>
+          {% endif %}
+      </div>
+  </div>
+
   <script>
     // 1. 圖片預覽功能
     function previewFile() {
@@ -204,22 +258,18 @@
     document.addEventListener("DOMContentLoaded", function() {
         const dbSkillsStr = document.getElementById('db-skills').value;
         if (dbSkillsStr) {
-            // 假設資料庫存的是 "Python, 平面設計, 攝影"
             const skills = dbSkillsStr.split(',').map(s => s.trim());
             const otherSkills = [];
 
             skills.forEach(skill => {
-                // 嘗試找看看有沒有對應值的 checkbox
                 const checkbox = document.querySelector(`.skill-checkbox[value="${skill}"]`);
                 if (checkbox) {
                     checkbox.checked = true;
                 } else if (skill) {
-                    // 找不到對應的，代表是「其他」類型的自訂技能
                     otherSkills.push(skill);
                 }
             });
 
-            // 如果有自訂技能，填入「其他」輸入框並打勾
             if (otherSkills.length > 0) {
                 document.getElementById('check-other').checked = true;
                 const otherInput = document.getElementById('other-skill-input');

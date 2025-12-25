@@ -140,11 +140,11 @@ async def home(request: Request, conn=Depends(getDB)):
 
     if selected_status and selected_status != "":
 
-        job_list = await jobs.getJobsByStatus(conn, selected_status)
+        job_list = await jobs.getJobsByStatus(conn, selected_status, current_user_id=user_id)
 
     else:
 
-        job_list = await jobs.getJobList(conn)
+        job_list = await jobs.getJobList(conn, current_user_id=user_id)
 
 
 
@@ -178,6 +178,7 @@ async def edit_profile_form(request: Request, conn=Depends(getDB)):
     if not user_id:
         return RedirectResponse(url="/loginForm", status_code=302)
 
+    # 1. 查詢使用者基本資料
     async with conn.cursor() as cur:
         await cur.execute("SELECT * FROM users WHERE id = %s;", (user_id,))
         user = await cur.fetchone()
@@ -185,9 +186,13 @@ async def edit_profile_form(request: Request, conn=Depends(getDB)):
     if not user:
         return HTMLResponse("找不到使用者", status_code=404)
 
+
+    blocked_list = await jobs.getBlockedUsers(conn, user_id)
+
     return templates.TemplateResponse("editProfile.html", {
         "request": request,
-        "user": user
+        "user": user,
+        "blocked_users": blocked_list  # 👈 這就是關鍵！把資料傳給 HTML
     })
 
 @app.post("/editProfile")
@@ -476,77 +481,6 @@ async def delete_job(request: Request, id: int, conn=Depends(getDB)):
 
 
 
-# =============================
-
-# 登入 / 登出
-
-# =============================
-
-@app.get("/loginForm")
-
-async def login_form(request: Request):
-
-    return templates.TemplateResponse("loginForm.html", {"request": request})
-
-
-
-@app.post("/login")
-
-async def login(
-
-    request: Request,
-
-    username: str = Form(...),
-
-    password: str = Form(...),
-
-    conn=Depends(getDB)
-
-):
-
-    async with conn.cursor() as cur:
-
-        sql = "SELECT id, role FROM users WHERE username=%s AND password=%s"
-
-        await cur.execute(sql, (username, password))
-
-        user = await cur.fetchone()
-
-
-
-    if user:
-
-        request.session["user_id"] = user["id"]
-
-        request.session["role"] = user["role"]
-
-
-
-        if user["role"] == "甲方":
-
-            return RedirectResponse(url="/dashboard_client", status_code=302)
-
-        else:
-
-            return RedirectResponse(url="/dashboard_freelancer", status_code=302)
-
-    else:
-
-        return HTMLResponse("帳號或密碼錯誤，<a href='/loginForm'>返回登入</a>", status_code=401)
-
-
-
-
-
-@app.get("/logout")
-
-async def logout(request: Request):
-
-    request.session.clear()
-
-    return RedirectResponse(url="/", status_code=302)
-
-
 
 # =============================
 
@@ -590,8 +524,7 @@ async def dashboard_freelancer(request: Request, conn=Depends(getDB)):
 
     freelancer_id = request.session.get("user_id")
 
-    available_jobs = await jobs.getAvailableJobs(conn)
-
+    available_jobs = await jobs.getAvailableJobs(conn, current_user_id=freelancer_id)
     my_jobs = await jobs.getJobsByFreelancer(conn, freelancer_id)
 
 
@@ -1346,6 +1279,12 @@ async def user_profile(
             review_dict["created_at_str"] = "N/A"
         reviews_data.append(review_dict)
 
+    # ✅ 新增：檢查「我」是否屏蔽了「這個人」
+    current_user_id = request.session.get("user_id")
+    is_blocked = False
+    if current_user_id:
+        is_blocked = await jobs.isBlocked(conn, current_user_id, user_id)
+
     return templates.TemplateResponse(
         "userProfile.html",
         {
@@ -1354,6 +1293,63 @@ async def user_profile(
             "rating_stats": rating_stats,
             "reviews": reviews_data,
             "avg_score": rating_stats["average_overall_rating"] if rating_stats else None,
-            "total_ratings": rating_stats["total_ratings"] if rating_stats else 0
+            "total_ratings": rating_stats["total_ratings"] if rating_stats else 0,
+            "is_blocked": is_blocked,   # 👈 傳入前端
+            "current_user_id": current_user_id # 👈 確保前端知道我有沒有登入
         }
     )
+
+@app.post("/api/toggleBlock")
+async def toggle_block_user(
+    request: Request,
+    blocked_id: int = Form(...),
+    conn=Depends(getDB)
+):
+    blocker_id = request.session.get("user_id")
+    if not blocker_id:
+        return HTMLResponse("請先登入", status_code=401)
+    
+    if blocker_id == blocked_id:
+         return HTMLResponse("不能屏蔽自己", status_code=400)
+
+    status = await jobs.toggleBlockUser(conn, blocker_id, blocked_id)
+    
+    # 操作完成後重新整理頁面
+    return RedirectResponse(url=f"/api/userProfile/{blocked_id}", status_code=302)
+
+# 取得我的黑名單列表 (用於設定頁面管理)
+async def getBlockedUsers(conn, blocker_id):
+    async with conn.cursor() as cur:
+        sql = """
+            SELECT u.id, u.username, u.role, b.created_at
+            FROM blocked_users b
+            JOIN users u ON b.blocked_id = u.id
+            WHERE b.blocker_id = %s
+            ORDER BY b.created_at DESC;
+        """
+        await cur.execute(sql, (blocker_id,))
+        return await cur.fetchall()
+    
+# main.py
+
+@app.get("/editProfile")
+async def edit_profile_form(request: Request, conn=Depends(getDB)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/loginForm", status_code=302)
+
+    async with conn.cursor() as cur:
+        await cur.execute("SELECT * FROM users WHERE id = %s;", (user_id,))
+        user = await cur.fetchone()
+
+    if not user:
+        return HTMLResponse("找不到使用者", status_code=404)
+
+    # ✅ 新增：取得我封鎖的使用者列表
+    blocked_list = await jobs.getBlockedUsers(conn, user_id)
+
+    return templates.TemplateResponse("editProfile.html", {
+        "request": request,
+        "user": user,
+        "blocked_users": blocked_list  # 👈 傳給前端
+    })

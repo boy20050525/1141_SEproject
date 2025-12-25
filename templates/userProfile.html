@@ -204,10 +204,42 @@
   <main>
     <!-- 用戶資訊 -->
     <div class="profile-header">
-      <h2>{{ user["username"] }}</h2>
-      <p><strong>角色：</strong> {{ user["role"] }}</p>
-      <p><strong>加入時間：</strong> {{ user["created_at_str"] }}</p>
+    <h2>{{ user["username"] }}</h2>
+    <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; margin: 10px 0;">
+    <p><strong>大師診斷數據：</strong></p>
+    <ul>
+        <li>我的 ID (current_user_id): {{ current_user_id }}</li>
+        <li>對象 ID (user['id']): {{ user['id'] }}</li>
+        <li>是否已封鎖 (is_blocked): {{ is_blocked }}</li>
+    </ul>
     </div>
+{% if current_user_id and current_user_id != user["id"] %}
+   {% endif %}
+  
+    <p><strong>角色：</strong> {{ user["role"] }}</p>
+    <p><strong>加入時間：</strong> {{ user["created_at_str"] }}</p>
+
+    {% if current_user_id and current_user_id != user["id"] %}
+        <div style="margin-top: 20px;">
+                <form action="/api/toggleBlock" method="post">
+                    <input type="hidden" name="blocked_id" value="{{ user['id'] }}">
+                    
+                    {% if is_blocked %}
+                        <button type="submit" style="background-color: #6b7280; color: white; padding: 8px 16px; border-radius: 6px; border:none; cursor:pointer;">
+                            🔓 解除屏蔽
+                        </button>
+                        <p style="color: #ef4444; font-size: 13px; margin-top: 5px;">
+                            ⚠️ 您已屏蔽此用戶，您將看不到他的案件，他也無法接您的案子。
+                        </p>
+                    {% else %}
+                        <button type="submit" style="background-color: #ef4444; color: white; padding: 8px 16px; border-radius: 6px; border:none; cursor:pointer;" onclick="return confirm('確定要屏蔽此用戶嗎？\n\n屏蔽後：\n1. 您將看不到他的案件。\n2. 他將無法對您的案件報價。');">
+                            🚫 屏蔽此用戶
+                        </button>
+                    {% endif %}
+                </form>
+            </div>
+        {% endif %}
+      </div>
 
     <!-- 評價統計 -->
     {% if avg_score is not none or total_ratings > 0 %}
