@@ -5,4 +5,5 @@ __pycache__/
 *.pyc
 
 # User uploaded files
-uploads/
+www/uploads/
+!www/uploads/.gitkeep

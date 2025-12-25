@@ -466,7 +466,7 @@ async def updateJob(conn, job_id, title, content, budget, requirement_file=None)
 # Issue Tracker 相關功能
 # =============================
 
-# 取得某案件的所有 Issue (包含留言)
+# 修改：取得某案件的所有 Issue (需包含 msg_type, file_path, filename)
 async def getIssues(conn, job_id):
     async with conn.cursor() as cur:
         # 1. 先抓出所有 Issues
@@ -480,7 +480,7 @@ async def getIssues(conn, job_id):
         await cur.execute(sql_issues, (job_id,))
         issues = await cur.fetchall()
 
-        # 2. 為每個 Issue 抓取 Comments
+        # 2. 為每個 Issue 抓取 Comments (新增選取新欄位)
         for issue in issues:
             sql_comments = """
                 SELECT c.*, u.username, u.role
@@ -505,14 +505,18 @@ async def createIssue(conn, job_id, title, user_id):
         await conn.commit()
 
 # 新增留言
-async def addIssueComment(conn, issue_id, user_id, content):
+async def addIssueComment(conn, issue_id, user_id, content, msg_type='text', file_path=None, filename=None):
     async with conn.cursor() as cur:
         sql = """
-            INSERT INTO issue_comments (issue_id, user_id, content)
-            VALUES (%s, %s, %s);
+            INSERT INTO issue_comments (issue_id, user_id, content, msg_type, file_path, filename, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+            RETURNING id, created_at;
         """
-        await cur.execute(sql, (issue_id, user_id, content))
+        # 注意：content 若是貼圖，存貼圖代碼；若是檔案，存說明文字
+        await cur.execute(sql, (issue_id, user_id, content, msg_type, file_path, filename))
+        new_comment = await cur.fetchone()
         await conn.commit()
+        return new_comment # 回傳新建立的資料以便 WebSocket 廣播
 
 # 將 Issue 標記為已解決
 async def resolveIssue(conn, issue_id):

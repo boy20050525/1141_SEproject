@@ -33,7 +33,9 @@ from db import getDB
 
 import jobs  # 對應 jobs.py（原本的 posts.py 改名後）
 
-
+from fastapi import WebSocket, WebSocketDisconnect
+from typing import List, Dict
+import json
 
 # 載入 routes 子模組
 
@@ -85,6 +87,36 @@ app.include_router(db_router, prefix="/api")
 
 app.include_router(login_router)
 app.include_router(rating_router, prefix="/api")
+
+
+# === WebSocket Connection Manager ===
+class ConnectionManager:
+    def __init__(self):
+        # 結構: {job_id: [websocket_connection, ...]}
+        self.active_connections: Dict[int, List[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, job_id: int):
+        await websocket.accept()
+        if job_id not in self.active_connections:
+            self.active_connections[job_id] = []
+        self.active_connections[job_id].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, job_id: int):
+        if job_id in self.active_connections:
+            if websocket in self.active_connections[job_id]:
+                self.active_connections[job_id].remove(websocket)
+
+    async def broadcast(self, message: dict, job_id: int):
+        if job_id in self.active_connections:
+            # 轉成 JSON 字串發送
+            json_msg = json.dumps(message, default=str)
+            for connection in self.active_connections[job_id]:
+                try:
+                    await connection.send_text(json_msg)
+                except:
+                    pass # 忽略已斷線但尚未移除的連線
+
+manager = ConnectionManager()
 
 
 # =============================
@@ -1044,7 +1076,78 @@ async def edit_job(
 
 # =============================
 
+# === WebSocket Endpoint ===
+@app.websocket("/ws/{job_id}/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, job_id: int, user_id: int):
+    await manager.connect(websocket, job_id)
+    try:
+        while True:
+            # 保持連線，這裡我們主要靠 API 觸發廣播，所以這裡只需接收 keepalive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, job_id)
 
+# === 新增：統一聊天發送 API (支援文字、貼圖、檔案) ===
+@app.post("/api/chat/send")
+async def send_chat_message(
+    request: Request,
+    job_id: int = Form(...),
+    issue_id: int = Form(...),
+    msg_type: str = Form(...), # 'text', 'sticker', 'image', 'file'
+    content: str = Form(None), # 文字內容 或 貼圖ID
+    file: UploadFile = File(None),
+    conn=Depends(getDB)
+):
+    user_id = request.session.get("user_id")
+    username = request.session.get("username")
+    role = request.session.get("role")
+
+    if not user_id:
+        return JSONResponse({"error": "未登入"}, status_code=401)
+
+    file_path = None
+    filename = None
+    display_content = content
+
+    # 處理檔案上傳
+    if msg_type in ['image', 'file'] and file and file.filename:
+        upload_dir = "www/uploads/chat"
+        os.makedirs(upload_dir, exist_ok=True)
+        safe_filename = f"{int(time.time())}_{user_id}_{file.filename}"
+        file_path = os.path.join(upload_dir, safe_filename)
+        filename = file.filename
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # 修正路徑以便前端存取 (移除 www 前綴)
+        file_path = file_path.replace("www/", "")
+
+        if not display_content:
+            display_content = filename
+
+    # 寫入資料庫
+    result = await jobs.addIssueComment(
+        conn, issue_id, user_id, display_content, 
+        msg_type, file_path, filename
+    )
+
+    # 準備廣播訊息
+    broadcast_data = {
+        "issue_id": issue_id,
+        "username": username,
+        "role": role,
+        "content": display_content,
+        "msg_type": msg_type,
+        "file_path": file_path,
+        "filename": filename,
+        "created_at": result["created_at"].strftime("%Y-%m-%d %H:%M")
+    }
+
+    # 透過 WebSocket 廣播給該 Job 的所有人
+    await manager.broadcast(broadcast_data, job_id)
+
+    return {"status": "ok"}
 
 # 新增 Issue (甲方)
 
