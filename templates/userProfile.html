@@ -206,13 +206,7 @@
     <div class="profile-header">
     <h2>{{ user["username"] }}</h2>
     <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; margin: 10px 0;">
-    <p><strong>大師診斷數據：</strong></p>
-    <ul>
-        <li>我的 ID (current_user_id): {{ current_user_id }}</li>
-        <li>對象 ID (user['id']): {{ user['id'] }}</li>
-        <li>是否已封鎖 (is_blocked): {{ is_blocked }}</li>
-    </ul>
-    </div>
+
 {% if current_user_id and current_user_id != user["id"] %}
    {% endif %}
   
