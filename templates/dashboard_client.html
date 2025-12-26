@@ -219,6 +219,130 @@
   <footer>
     © 2025 <span>工作委託平台</span> | 甲方控制台
   </footer>
+  <div id="global-toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+  <script>
+      (function() {
+          // 1. 取得使用者資訊 (由後端 Jinja2 渲染)
+          // 注意：如果未登入，這裡會是 None 或空字串
+          const currentUserId = "{{ request.session.get('user_id') }}";
+          const currentUserRole = "{{ request.session.get('role') }}";
+
+          // 如果沒有登入，就不建立 WebSocket 連線
+          if (!currentUserId || currentUserId === "None") {
+              return;
+          }
+
+          console.log("🔔 正在連接通知服務... User:", currentUserId);
+
+          // 2. 建立 WebSocket 連線
+          const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+          const notifyWs = new WebSocket(`${protocol}://${window.location.host}/ws/notify/${currentUserId}`);
+
+          notifyWs.onopen = function() {
+              console.log("✅ 通知服務已連線");
+          };
+
+          notifyWs.onmessage = function(event) {
+              try {
+                  const data = JSON.parse(event.data);
+                  
+                  // --- 處理各種類型的通知 ---
+
+                  // 情況 A: 新工作通知 (只顯示給乙方)
+                  if (data.type === "new_job" && currentUserRole === "乙方") {
+                      showGlobalToast(data.message, "info", `/read/${data.job_id || ''}`); // 點擊可跳轉
+                  }
+
+                  // 情況 B: 新報價通知 (只顯示給甲方)
+                  // 後端已經過濾過只發給該案主，但前端雙重確認更保險
+                  if (data.type === "new_bid") {
+                      showGlobalToast(data.message, "success", "/dashboard_client");
+                  }
+
+                  // 🔥🔥 新增：情況 C - 獲選通知 (乙方收到) 🔥🔥
+                  if (data.type === "bid_accepted") {
+                      // 使用綠色 (success) 顯示，點擊後跳轉到該案件詳情
+                      showGlobalToast(data.message, "success", `/read/${data.job_id}`);
+                  }
+
+              } catch (e) {
+                  console.error("解析通知失敗:", e);
+              }
+          };
+
+          notifyWs.onclose = function() {
+              console.log("🔕 通知服務已斷線");
+          };
+
+          // 3. 顯示通知的小工具 (Toast)
+          function showGlobalToast(message, type, linkUrl) {
+              const container = document.getElementById('global-toast-container');
+              if (!container) return;
+
+              const toast = document.createElement('div');
+              
+              // 設定背景顏色 (info=藍色, success=綠色)
+              const bgColor = type === 'success' ? '#10b981' : '#3b82f6';
+              
+              // 設定樣式
+              toast.style.cssText = `
+                  background-color: ${bgColor};
+                  color: white;
+                  padding: 16px 24px;
+                  margin-bottom: 12px;
+                  border-radius: 8px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                  font-size: 15px;
+                  line-height: 1.5;
+                  cursor: pointer;
+                  opacity: 0;
+                  transform: translateX(20px);
+                  transition: all 0.3s ease;
+                  min-width: 320px;
+                  max-width: 400px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+              `;
+
+              // 內容 HTML
+              toast.innerHTML = `
+                  <span>${message}</span>
+                  <span style="font-size:18px; margin-left:10px;">✕</span>
+              `;
+
+              // 點擊行為
+              toast.onclick = function() {
+                  if (linkUrl) {
+                      window.location.href = linkUrl;
+                  }
+                  removeToast(toast);
+              };
+
+              container.appendChild(toast);
+
+              // 進場動畫
+              requestAnimationFrame(() => {
+                  toast.style.opacity = '1';
+                  toast.style.transform = 'translateX(0)';
+              });
+
+              // 5秒後自動消失
+              setTimeout(() => {
+                  removeToast(toast);
+              }, 6000);
+          }
+
+          function removeToast(element) {
+              element.style.opacity = '0';
+              element.style.transform = 'translateX(20px)';
+              setTimeout(() => {
+                  if(element.parentNode) element.parentNode.removeChild(element);
+              }, 300);
+          }
+
+      })();
+  </script>
 </body>
 </html>
 
