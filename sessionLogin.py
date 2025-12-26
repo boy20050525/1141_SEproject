@@ -24,31 +24,6 @@ templates = Jinja2Templates(directory="templates")
 SMTP_EMAIL = os.getenv("MAIL_USERNAME")
 SMTP_PASSWORD = os.getenv("MAIL_PASSWORD")
 
-# 👇 新增：寄信函式
-def send_reset_email_task(to_email: str, reset_link: str):
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = SMTP_EMAIL
-        msg['To'] = to_email
-        msg['Subject'] = "【工作委託平台】重設密碼連結"
-        body = f"""
-        <html><body>
-            <h2>重設您的密碼</h2>
-            <p>請點擊下方連結以重設您的密碼（1小時內有效）：</p>
-            <p><a href="{reset_link}" style="background:#c2a676; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">重設密碼</a></p>
-        </body></html>
-        """
-        msg.attach(MIMEText(body, 'html'))
-        
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        print(f"✅ 信件已發送至 {to_email}")
-    except Exception as e:
-        print(f"❌ 寄信失敗: {e}")
-
 
 # === 登入頁 ===
 @router.get("/loginForm", response_class=HTMLResponse)
