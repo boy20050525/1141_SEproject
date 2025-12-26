@@ -89,12 +89,17 @@ app.include_router(login_router)
 app.include_router(rating_router, prefix="/api")
 
 
-# === WebSocket Connection Manager ===
+# === WebSocket Connection Manager (修改版) ===
 class ConnectionManager:
     def __init__(self):
-        # 結構: {job_id: [websocket_connection, ...]}
+        # 原本的聊天室連線: {job_id: [websocket, ...]}
         self.active_connections: Dict[int, List[WebSocket]] = {}
+        
+        # 🔥 新增：全域通知連線: {user_id: websocket}
+        # 假設每個使用者同一時間只有一個主要的通知連線 (若有多分頁需求可改為 List)
+        self.user_connections: Dict[int, WebSocket] = {}
 
+    # --- 1. 聊天室相關 (保持不變，或稍微調整) ---
     async def connect(self, websocket: WebSocket, job_id: int):
         await websocket.accept()
         if job_id not in self.active_connections:
@@ -108,15 +113,53 @@ class ConnectionManager:
 
     async def broadcast(self, message: dict, job_id: int):
         if job_id in self.active_connections:
-            # 轉成 JSON 字串發送
             json_msg = json.dumps(message, default=str)
             for connection in self.active_connections[job_id]:
                 try:
                     await connection.send_text(json_msg)
                 except:
-                    pass # 忽略已斷線但尚未移除的連線
+                    pass
+
+    # --- 2. 🔥 新增：全域通知相關 ---
+    async def connect_user(self, websocket: WebSocket, user_id: int):
+        await websocket.accept()
+        # 儲存使用者的連線
+        self.user_connections[user_id] = websocket
+
+    def disconnect_user(self, user_id: int):
+        if user_id in self.user_connections:
+            del self.user_connections[user_id]
+
+    # 發送給「特定」使用者 (例如：有人報價，通知該案件的甲方)
+    async def send_to_user(self, user_id: int, message: dict):
+        if user_id in self.user_connections:
+            try:
+                await self.user_connections[user_id].send_text(json.dumps(message, default=str))
+            except:
+                pass
+
+    # 發送給「所有」特定角色的使用者 (例如：新工作通知所有乙方)
+    # 這邊我們簡單做：直接廣播給所有連線中的人，前端自己判斷要不要顯示
+    async def broadcast_global(self, message: dict):
+        json_msg = json.dumps(message, default=str)
+        for user_id, connection in self.user_connections.items():
+            try:
+                await connection.send_text(json_msg)
+            except:
+                pass
 
 manager = ConnectionManager()
+
+# === 全域通知 WebSocket ===
+@app.websocket("/ws/notify/{user_id}")
+async def notify_endpoint(websocket: WebSocket, user_id: int):
+    await manager.connect_user(websocket, user_id)
+    try:
+        while True:
+            # 保持連線，只需接收 keepalive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect_user(user_id)
 
 
 # =============================
@@ -481,6 +524,17 @@ async def add_job(
         
 
     await jobs.addJob(conn, title, content, budget, user_id, file_path, deadline)
+
+    # 🔥🔥 新增：廣播新工作通知 🔥🔥
+    notification = {
+        "type": "new_job",
+        "title": title,
+        "budget": budget,
+        "client": request.session.get("username"),
+        "message": f"🔥 新工作快報：{title} (預算 ${budget})"
+    }
+    # 這裡我們廣播給所有人，前端會自己過濾是否為乙方
+    await manager.broadcast_global(notification)
 
     return RedirectResponse(url="/dashboard_client", status_code=302)
 
@@ -903,6 +957,23 @@ async def bid_job(
 
     result = await jobs.placeBid(conn, job_id, bidder_id, amount, file_path)
 
+    if result == "success":
+        # 🔥🔥 新增：通知該案件的甲方 🔥🔥
+        # 1. 先查出甲方是誰
+        job_info = await jobs.getJob(conn, job_id)
+        if job_info:
+            target_client_id = job_info["client_id"]
+            bidder_name = request.session.get("username")
+            
+            notification = {
+                "type": "new_bid",
+                "job_title": job_info["title"],
+                "bidder": bidder_name,
+                "amount": amount,
+                "message": f"💰 您的案件「{job_info['title']}」有新的報價！(${amount})"
+            }
+            # 2. 只發送給這位甲方
+            await manager.send_to_user(target_client_id, notification)
 
 
     if result == "too_low":
@@ -959,29 +1030,34 @@ async def download_proposal(bid_id: int, conn=Depends(getDB)):
 
 # === 甲方選擇乙方 ===
 
+# main.py
+
 @app.post("/chooseBid")
-
 async def choose_bid(
-
     request: Request,
-
     job_id: int = Form(...),
-
     freelancer_id: int = Form(...),
-
     conn=Depends(getDB)
-
 ):
-
     role = request.session.get("role")
-
     if role != "甲方":
-
         return HTMLResponse("⚠️ 只有甲方可以選擇乙方", status_code=403)
 
-
-
+    # 1. 執行資料庫更新 (選擇乙方)
     await jobs.chooseBid(conn, job_id, freelancer_id)
+
+    # 🔥🔥 新增：發送獲選通知給乙方 🔥🔥
+    # 先查詢案件標題，這樣通知比較清楚
+    job_info = await jobs.getJob(conn, job_id)
+    
+    if job_info:
+        notification = {
+            "type": "bid_accepted",  # 這是新的通知類型
+            "job_id": job_id,
+            "message": f"🎉 恭喜！甲方已選擇您承接案件：「{job_info['title']}」"
+        }
+        # 指定發送給該位乙方 (freelancer_id)
+        await manager.send_to_user(freelancer_id, notification)
 
     return RedirectResponse(url=f"/read/{job_id}", status_code=302)
 
